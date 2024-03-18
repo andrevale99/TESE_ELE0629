@@ -8,12 +8,12 @@
 #include "driver/gpio.h"
 #include "hal/gpio_types.h"
 
-#define BT_1 23
-#define BT_2 22
+#define BT_1 GPIO_NUM_23
+#define BT_2 GPIO_NUM_22
 
-#define LED_R 18
-#define LED_G 17
-#define LED_Y 16
+#define LED_R GPIO_NUM_8
+#define LED_G GPIO_NUM_17
+#define LED_Y GPIO_NUM_16
 
 static const char *LED_TAG = "LEDS";
 
@@ -46,8 +46,6 @@ void app_main() {
   gpio_set_level(LED_R, 0);
   gpio_set_level(LED_G, 0);
   gpio_set_level(LED_Y, 0);
-
-  uint8_t statusLeds = 0x00;
 
   while (true) 
   {
