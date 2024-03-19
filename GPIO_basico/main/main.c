@@ -25,7 +25,7 @@ void app_main() {
     .pin_bit_mask = (1<<LED_R) | (1<<LED_G) | (1<<LED_Y),
     .mode = GPIO_MODE_OUTPUT,
     .pull_up_en = GPIO_PULLUP_DISABLE,
-    .pull_down_en = GPIO_PULLDOWN_ENABLE,
+    .pull_down_en = GPIO_PULLDOWN_DISABLE,
     .intr_type = GPIO_INTR_DISABLE
   };
 
