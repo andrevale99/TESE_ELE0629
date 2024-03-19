@@ -6,12 +6,11 @@
 #include "esp_log.h"
 
 #include "driver/gpio.h"
-#include "hal/gpio_types.h"
 
 #define BT_1 GPIO_NUM_23
 #define BT_2 GPIO_NUM_22
 
-#define LED_R GPIO_NUM_8
+#define LED_R GPIO_NUM_18
 #define LED_G GPIO_NUM_17
 #define LED_Y GPIO_NUM_16
 
@@ -47,10 +46,16 @@ void app_main() {
   gpio_set_level(LED_G, 0);
   gpio_set_level(LED_Y, 0);
 
+  int status_led = 0;
+
   while (true) 
   {
-    ESP_LOGI(LED_TAG, "LED_R: %d", gpio_get_level(LED_R));
-    ESP_LOGI(LED_TAG, "LED_R: %d", gpio_get_level(LED_G));
+    status_led = gpio_get_level(LED_R);  
+    ESP_LOGI(LED_TAG, "LED_R: %d", status_led);
+    status_led = gpio_get_level(LED_G);
+    ESP_LOGI(LED_TAG, "LED_G: %d", status_led);
+    status_led = gpio_get_level(LED_Y);
+    ESP_LOGI(LED_TAG, "LED_Y: %d \n", status_led);
 
     if(!gpio_get_level(BT_1))
       gpio_set_level(LED_R, !gpio_get_level(LED_R));
