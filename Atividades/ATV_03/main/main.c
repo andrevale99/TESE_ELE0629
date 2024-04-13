@@ -18,6 +18,8 @@ SemaphoreHandle_t xMutexSemaphore_TaskSensores = NULL;
 SemaphoreHandle_t xMutexSemaphore_TaskLeitura = NULL;
 QueueHandle_t xQueue = NULL;
 
+uint8_t ucTaskDeletedFlag = 0x00;
+
 void vTaskTemperatura(void *pvParameter);
 TaskHandle_t xTaskTemperatura_Handle = NULL;
 const char *TAG_TEMPERATURA = "[TEMPERATURA]";
@@ -94,6 +96,9 @@ void vTaskTemperatura(void *pvParameter)
         if (ucContTemperatura == MAX_WRITES_TASK)
         {
             ESP_LOGI(TAG_TEMPERATURA, "Escrita Finalizada");
+
+            ucTaskDeletedFlag |= (1<<0);
+
             vTaskDelete(xTaskTemperatura_Handle);
         }
         else if(xSemaphoreTake(xMutexSemaphore_TaskSensores, 1000 / portTICK_PERIOD_MS) == pdTRUE)
@@ -127,6 +132,9 @@ void vTaskUmidade(void *pvParameter)
         if (ucContUmidade == MAX_WRITES_TASK)
         {
             ESP_LOGI(TAG_UMIDADE, "Escrita Finalizada");
+
+            ucTaskDeletedFlag |= (1<<1);
+
             vTaskDelete(xTaskUmidade_Handle);
         }
         else if(xSemaphoreTake(xMutexSemaphore_TaskSensores, 1000 / portTICK_PERIOD_MS) == pdTRUE)
@@ -159,6 +167,9 @@ void vTaskVelocidade(void *pvParameter)
         if (ucContVelocidade == MAX_WRITES_TASK)
         {
             ESP_LOGI(TAG_VELOCIDADE, "Escrita Finalizada");
+
+            ucTaskDeletedFlag |= (1<<2);
+
             vTaskDelete(xTaskVelocidade_Handle);
         }
         else if(xSemaphoreTake(xMutexSemaphore_TaskSensores, 1000 / portTICK_PERIOD_MS) == pdTRUE)
@@ -191,6 +202,9 @@ void vTaskPeso(void *pvParameter)
         if (ucContPeso == MAX_WRITES_TASK)
         {
             ESP_LOGI(TAG_PESO, "Escrita Finalizada");
+
+            ucTaskDeletedFlag |= (1<<3);
+
             vTaskDelete(xTaskPeso_Handle);
         }
         else if(xSemaphoreTake(xMutexSemaphore_TaskSensores, 1000 / portTICK_PERIOD_MS) == pdTRUE)
@@ -223,6 +237,9 @@ void vTaskDistancia(void *pvParameter)
         if (ucContDistancia == MAX_WRITES_TASK)
         {
             ESP_LOGI(TAG_DISTANCIA, "Escrita Finalizada");
+
+            ucTaskDeletedFlag |= (1<<4);
+
             vTaskDelete(xTaskDistancia_Handle);
         }
         else if(xSemaphoreTake(xMutexSemaphore_TaskSensores, 1000 / portTICK_PERIOD_MS) == pdTRUE)
@@ -252,7 +269,12 @@ void vTaskLeitura1(void *pvParameter)
 
     while(1)
     {
-        if(xSemaphoreTake(xMutexSemaphore_TaskLeitura, 100 / portTICK_PERIOD_MS) == pdTRUE)
+        if (ucTaskDeletedFlag == 0x1F)
+        {
+            ESP_LOGI(TAG_TASKLEITURA1, "Leitura 1 Finalizada");
+            vTaskDelete(xTaskleitura_1_Handle);
+        }
+        else if(xSemaphoreTake(xMutexSemaphore_TaskLeitura, 100 / portTICK_PERIOD_MS) == pdTRUE)
         {
             if (xQueueReceive(xQueue, &pcStringReceive, portMAX_DELAY) == pdTRUE)
             {
@@ -279,7 +301,12 @@ void vTaskLeitura2(void *pvParameter)
 
     while(1)
     {
-        if(xSemaphoreTake(xMutexSemaphore_TaskLeitura, 100 / portTICK_PERIOD_MS) == pdTRUE)
+        if (ucTaskDeletedFlag == 0x1F)
+        {
+            ESP_LOGI(TAG_TASKLEITURA2, "Leitura 1 Finalizada");
+            vTaskDelete(xTaskleitura_2_Handle);
+        }
+        else if(xSemaphoreTake(xMutexSemaphore_TaskLeitura, 100 / portTICK_PERIOD_MS) == pdTRUE)
         {
             if (xQueueReceive(xQueue, &pcStringReceive, portMAX_DELAY) == pdTRUE)
             {
