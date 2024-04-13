@@ -359,7 +359,7 @@ void vTaskLeitura1(void *pvParameter)
     {
         if (ucTaskDeletedFlag == ALL_TASKS_DELETED)
         {
-            ESP_LOGI(TAG_TASKLEITURA1, "Leitura 1 Finalizada");
+            ESP_LOGI(TAG_TASKLEITURA1, "Leitura Finalizada");
             vTaskDelete(xTaskleitura_1_Handle);
         }
         else if(xSemaphoreTake(xMutexSemaphore_TaskLeitura, 100 / portTICK_PERIOD_MS) == pdTRUE)
@@ -391,7 +391,7 @@ void vTaskLeitura2(void *pvParameter)
     {
         if (ucTaskDeletedFlag == ALL_TASKS_DELETED)
         {
-            ESP_LOGI(TAG_TASKLEITURA2, "Leitura 1 Finalizada");
+            ESP_LOGI(TAG_TASKLEITURA2, "Leitura Finalizada");
             vTaskDelete(xTaskleitura_2_Handle);
         }
         else if(xSemaphoreTake(xMutexSemaphore_TaskLeitura, 100 / portTICK_PERIOD_MS) == pdTRUE)
