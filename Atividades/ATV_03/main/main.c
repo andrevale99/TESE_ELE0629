@@ -13,7 +13,8 @@
 #define MAX_WRITES_TASK 5
 #define MAX_LENGTH_QUEU 10
 
-SemaphoreHandle_t xMutexSemaphore = NULL;
+SemaphoreHandle_t xMutexSemaphore_TaskSensores = NULL;
+SemaphoreHandle_t xMutexSemaphore_TaskLeitura = NULL;
 QueueHandle_t xQueue = NULL;
 
 void vTaskTemperatura(void *pvParameter);
@@ -46,18 +47,19 @@ const char *TAG_TASKLEITURA2 = "[TASKLEITURA_2]";
 
 void app_main(void)
 { 
-    xMutexSemaphore = xSemaphoreCreateMutex();
-    xQueue = xQueueCreate(MAX_LENGTH_QUEU, sizeof(char *)*15);
+    xMutexSemaphore_TaskSensores = xSemaphoreCreateMutex();
+    xMutexSemaphore_TaskLeitura = xSemaphoreCreateMutex();
+    xQueue = xQueueCreate(MAX_LENGTH_QUEU, sizeof(char)*15);
 
     BaseType_t iTestCreateTask = pdFAIL;    
 
-    iTestCreateTask = xTaskCreate(vTaskTemperatura, "Task Umidade", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskTemperatura_Handle);
+    iTestCreateTask = xTaskCreate(vTaskTemperatura, "Task Umidade", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+7, &xTaskTemperatura_Handle);
     if (iTestCreateTask == pdFAIL)
         ESP_LOGW(TAG_UMIDADE, "Erro ao criar a Task");
     
-    // iTestCreateTask = xTaskCreate(vTaskUmidade, "Task Umidade", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskUmidade_Handle);
-    // if (iTestCreateTask == pdFAIL)
-    //     ESP_LOGW(TAG_UMIDADE, "Erro ao criar a Task");
+    iTestCreateTask = xTaskCreate(vTaskUmidade, "Task Umidade", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskUmidade_Handle);
+    if (iTestCreateTask == pdFAIL)
+        ESP_LOGW(TAG_UMIDADE, "Erro ao criar a Task");
     
     // iTestCreateTask = xTaskCreate(vTaskVelocidade, "Task Velocidade", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskVelocidade_Handle);
     // if (iTestCreateTask == pdFAIL)
@@ -93,16 +95,24 @@ void vTaskTemperatura(void *pvParameter)
             ESP_LOGI(TAG_TEMPERATURA, "Escrita Finalizada");
             vTaskDelete(xTaskTemperatura_Handle);
         }
-        else if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        else if(xSemaphoreTake(xMutexSemaphore_TaskSensores, 1000 / portTICK_PERIOD_MS) == pdTRUE)
         {
-            ESP_LOGW(TAG_TEMPERATURA, "Ecrita Realizada");
-
-            xQueueSend(xQueue, &ucDataTemperatura, portMAX_DELAY);
-            ucContTemperatura += 1;
-            xSemaphoreGive(xMutexSemaphore);            
-            vTaskDelay( 100 / portTICK_PERIOD_MS);
+            if(xQueueSend(xQueue, &ucDataTemperatura, portMAX_DELAY) == pdTRUE)
+            {
+                ESP_LOGW(TAG_TEMPERATURA, "Ecrita Realizada");
+                
+                ucContTemperatura += 1;
+            }
+            else
+                ESP_LOGW(TAG_TEMPERATURA, "Timeout Queu");
+            
+            xSemaphoreGive(xMutexSemaphore_TaskSensores);            
         }
-    }
+        else
+            ESP_LOGW(TAG_TEMPERATURA, "Timeout Mutex");
+
+        vTaskDelay( 1000 / portTICK_PERIOD_MS);
+    }   
 }
 
 void vTaskUmidade(void *pvParameter)
@@ -113,21 +123,28 @@ void vTaskUmidade(void *pvParameter)
 
     while(1)
     {
-        if (ucContUmidade == MAX_WRITES_TASK)
+         if (ucContUmidade == MAX_WRITES_TASK)
         {
             ESP_LOGI(TAG_UMIDADE, "Escrita Finalizada");
-            vTaskDelete(xTaskUmidade_Handle);
+            vTaskDelete(xTaskTemperatura_Handle);
         }
-        else if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        else if(xSemaphoreTake(xMutexSemaphore_TaskSensores, 1000 / portTICK_PERIOD_MS) == pdTRUE)
         {
-
-            ESP_LOGW(TAG_UMIDADE, "Ecrita Realizada");
-
-            xQueueSend(xQueue, &ucDataUmidade, portMAX_DELAY);
-            ucContUmidade += 1;
-            xSemaphoreGive(xMutexSemaphore);            
-            vTaskDelay( 100 / portTICK_PERIOD_MS);
+            if(xQueueSend(xQueue, &ucDataUmidade, portMAX_DELAY) == pdTRUE)
+            {
+                ESP_LOGW(TAG_UMIDADE, "Ecrita Realizada");
+                
+                ucContUmidade += 1;
+            }
+            else
+                ESP_LOGW(TAG_UMIDADE, "Timeout Queu");
+            
+            xSemaphoreGive(xMutexSemaphore_TaskSensores);            
         }
+        else
+            ESP_LOGW(TAG_UMIDADE, "Timeout Mutex");
+        
+        vTaskDelay( 1000 / portTICK_PERIOD_MS);
     }
 }
 
@@ -144,13 +161,13 @@ void vTaskVelocidade(void *pvParameter)
             ESP_LOGI(TAG_VELOCIDADE, "Escrita Finalizada");
             vTaskDelete(xTaskVelocidade_Handle);
         }
-        else if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        else if(xSemaphoreTake(xMutexSemaphore_TaskSensores, portMAX_DELAY) == pdTRUE)
         {
             ESP_LOGW(TAG_VELOCIDADE, "Ecrita Realizada");
 
             xQueueSend(xQueue, &ucDataVelocidade, portMAX_DELAY);
             ucContVelocidade += 1;
-            xSemaphoreGive(xMutexSemaphore);            
+            xSemaphoreGive(xMutexSemaphore_TaskSensores);            
             vTaskDelay( 100 / portTICK_PERIOD_MS);
         }
     }
@@ -169,12 +186,12 @@ void vTaskPeso(void *pvParameter)
             ESP_LOGI(TAG_PESO, "Escrita Finalizada");
             vTaskDelete(xTaskPeso_Handle);
         }
-        else if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        else if(xSemaphoreTake(xMutexSemaphore_TaskSensores, portMAX_DELAY) == pdTRUE)
         {
             // ESP_LOGI(TAG_PESO, "Ecrita Realizada %u", ucContPeso);
             xQueueSend(xQueue, &ucDataPeso, portMAX_DELAY);
             ucContPeso += 1;
-            xSemaphoreGive(xMutexSemaphore);            
+            xSemaphoreGive(xMutexSemaphore_TaskSensores);            
             vTaskDelay( 500 / portTICK_PERIOD_MS);
         }
     }
@@ -193,12 +210,12 @@ void vTaskDistancia(void *pvParameter)
             ESP_LOGI(TAG_DISTANCIA, "Escrita Finalizada");
             vTaskDelete(xTaskDistancia_Handle);
         }
-        else if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        else if(xSemaphoreTake(xMutexSemaphore_TaskSensores, portMAX_DELAY) == pdTRUE)
         {
             // ESP_LOGI(TAG_DISTANCIA, "Ecrita Realizada %u", ucContDistancia);
             xQueueSend(xQueue, &ucDataDistancia, portMAX_DELAY);
             ucContDistancia += 1;
-            xSemaphoreGive(xMutexSemaphore);            
+            xSemaphoreGive(xMutexSemaphore_TaskSensores);            
             vTaskDelay( 100 / portTICK_PERIOD_MS);
         }
     }
@@ -207,43 +224,53 @@ void vTaskDistancia(void *pvParameter)
 void vTaskLeitura1(void *pvParameter)
 {
     ESP_LOGI(TAG_TASKLEITURA1, "Task Criada");
-    char *ucStringReceive = "0123456789abcd\0";
+    char *pcStringReceive = "0123456789abcd\0";
     uint8_t ucContLeitura1 = 0;
 
     while(1)
     {
-        if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        if(xSemaphoreTake(xMutexSemaphore_TaskLeitura, 1000 / portTICK_PERIOD_MS) == pdTRUE)
         {
-            if (xQueueReceive(xQueue, &ucStringReceive, portMAX_DELAY) == pdTRUE)
+            if (xQueueReceive(xQueue, &pcStringReceive, portMAX_DELAY) == pdTRUE)
             {
                 ucContLeitura1 += 1;
-                ESP_LOGI(TAG_TASKLEITURA1, "Received: %s", ucStringReceive);
+                ESP_LOGI(TAG_TASKLEITURA1, "Received: %s", pcStringReceive);
             }
+            else
+                ESP_LOGI(TAG_TASKLEITURA1, "Timeout Queu");
 
-            xSemaphoreGive(xMutexSemaphore);            
-            vTaskDelay( 100 / portTICK_PERIOD_MS);
+            xSemaphoreGive(xMutexSemaphore_TaskLeitura);            
         }
+        else
+            ESP_LOGI(TAG_TASKLEITURA1, "Timeout Mutex");
+        
+        vTaskDelay( 1000 / portTICK_PERIOD_MS);
     }
 }
 
 void vTaskLeitura2(void *pvParameter)
 {
     ESP_LOGI(TAG_TASKLEITURA2, "Task Criada");
-    char *ucStringReceive = "0123456789abcd\0";
+    char *pcStringReceive = "0123456789abcd\0";
     uint8_t ucContLeitura2 = 0;
 
     while(1)
     {
-        if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        if(xSemaphoreTake(xMutexSemaphore_TaskLeitura, 1000 / portTICK_PERIOD_MS) == pdTRUE)
         {
-            if (xQueueReceive(xQueue, &ucStringReceive, portMAX_DELAY) == pdTRUE)
+            if (xQueueReceive(xQueue, &pcStringReceive, portMAX_DELAY) == pdTRUE)
             {
                 ucContLeitura2 += 1;
-                ESP_LOGI(TAG_TASKLEITURA2, "Received: %s", ucStringReceive);
+                ESP_LOGI(TAG_TASKLEITURA2, "Received: %s", pcStringReceive);
             }
+            else
+                ESP_LOGI(TAG_TASKLEITURA2, "Timeout Queu");
 
-            xSemaphoreGive(xMutexSemaphore);            
-            vTaskDelay( 200 / portTICK_PERIOD_MS);
+            xSemaphoreGive(xMutexSemaphore_TaskLeitura);            
         }
+        else
+            ESP_LOGI(TAG_TASKLEITURA2, "Timeout Mutex");
+
+        vTaskDelay( 1000 / portTICK_PERIOD_MS);
     }
 }
