@@ -9,6 +9,9 @@
 
 #define LOW_PRIORITY 0
 #define SIZE_BYTES_TASK 2048
+#define MAX_WRITES_TASK 5
+
+SemaphoreHandle_t xMutexSemaphore = NULL;
 
 void vTaskTemperatura(void *pvParameter);
 TaskHandle_t xTaskTemperatura_Handle = NULL;
@@ -40,8 +43,14 @@ const char *TAG_TASKLEITURA2 = "[TASKLEITURA_2]";
 
 void app_main(void)
 { 
+    xMutexSemaphore = xSemaphoreCreateMutex();
+
     BaseType_t iTestCreateTask = NULL;    
 
+    iTestCreateTask = xTaskCreate(vTaskTemperatura, "Task Umidade", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskTemperatura_Handle);
+    if (iTestCreateTask == pdFAIL)
+        ESP_LOGW(TAG_UMIDADE, "Erro ao criar a Task");
+    
     iTestCreateTask = xTaskCreate(vTaskUmidade, "Task Umidade", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskUmidade_Handle);
     if (iTestCreateTask == pdFAIL)
         ESP_LOGW(TAG_UMIDADE, "Erro ao criar a Task");
@@ -58,13 +67,13 @@ void app_main(void)
     if (iTestCreateTask == pdFAIL)
         ESP_LOGW(TAG_DISTANCIA, "Erro ao criar a Task");
     
-    iTestCreateTask = xTaskCreate(vTaskLeitura1, "Task Leitura_1", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskleitura_1_Handle);
-    if (iTestCreateTask == pdFAIL)
-        ESP_LOGW(TAG_TASKLEITURA1, "Erro ao criar a Task");
+    // iTestCreateTask = xTaskCreate(vTaskLeitura1, "Task Leitura_1", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskleitura_1_Handle);
+    // if (iTestCreateTask == pdFAIL)
+    //     ESP_LOGW(TAG_TASKLEITURA1, "Erro ao criar a Task");
     
-    iTestCreateTask = xTaskCreate(vTaskLeitura2, "Task Leitura_2", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskleitura_2_Handle);
-    if (iTestCreateTask == pdFAIL)
-        ESP_LOGW(TAG_TASKLEITURA2, "Erro ao criar a Task");
+    // iTestCreateTask = xTaskCreate(vTaskLeitura2, "Task Leitura_2", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskleitura_2_Handle);
+    // if (iTestCreateTask == pdFAIL)
+    //     ESP_LOGW(TAG_TASKLEITURA2, "Erro ao criar a Task");
 }
 
 void vTaskTemperatura(void *pvParameter)
@@ -74,7 +83,18 @@ void vTaskTemperatura(void *pvParameter)
 
     while(1)
     {
-        vTaskDelay( 1000 / portTICK_PERIOD_MS);
+        if (ucContTemperatura == MAX_WRITES_TASK)
+        {
+            ESP_LOGI(TAG_TEMPERATURA, "Escrita Finalizada");
+            vTaskDelete(xTaskTemperatura_Handle);
+        }
+        else if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        {
+            // ESP_LOGI(TAG_TEMPERATURA, "Ecrita Realizada %u", ucContTemperatura);
+            ucContTemperatura += 1;
+            xSemaphoreGive(xMutexSemaphore);            
+            vTaskDelay( 100 / portTICK_PERIOD_MS);
+        }
     }
 }
 
@@ -85,7 +105,18 @@ void vTaskUmidade(void *pvParameter)
 
     while(1)
     {
-        vTaskDelay( 1000 / portTICK_PERIOD_MS);
+        if (ucContUmidade == MAX_WRITES_TASK)
+        {
+            ESP_LOGI(TAG_UMIDADE, "Escrita Finalizada");
+            vTaskDelete(xTaskUmidade_Handle);
+        }
+        else if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        {
+            // ESP_LOGI(TAG_UMIDADE, "Ecrita Realizada %u", ucContUmidade);
+            ucContUmidade += 1;
+            xSemaphoreGive(xMutexSemaphore);            
+            vTaskDelay( 100 / portTICK_PERIOD_MS);
+        }
     }
 }
 
@@ -96,7 +127,18 @@ void vTaskVelocidade(void *pvParameter)
 
     while(1)
     {
-        vTaskDelay( 1000 / portTICK_PERIOD_MS);
+        if (ucContVelocidade == MAX_WRITES_TASK)
+        {
+            ESP_LOGI(TAG_VELOCIDADE, "Escrita Finalizada");
+            vTaskDelete(xTaskVelocidade_Handle);
+        }
+        else if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        {
+            // ESP_LOGI(TAG_VELOCIDADE, "Ecrita Realizada %u", ucContVelocidade);
+            ucContVelocidade += 1;
+            xSemaphoreGive(xMutexSemaphore);            
+            vTaskDelay( 100 / portTICK_PERIOD_MS);
+        }
     }
 }
 
@@ -107,7 +149,18 @@ void vTaskPeso(void *pvParameter)
 
     while(1)
     {
-        vTaskDelay( 1000 / portTICK_PERIOD_MS);
+        if (ucContPeso == MAX_WRITES_TASK)
+        {
+            ESP_LOGI(TAG_PESO, "Escrita Finalizada");
+            vTaskDelete(xTaskPeso_Handle);
+        }
+        else if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        {
+            // ESP_LOGI(TAG_PESO, "Ecrita Realizada %u", ucContPeso);
+            ucContPeso += 1;
+            xSemaphoreGive(xMutexSemaphore);            
+            vTaskDelay( 100 / portTICK_PERIOD_MS);
+        }
     }
 }
 
@@ -118,7 +171,18 @@ void vTaskDistancia(void *pvParameter)
 
     while(1)
     {
-        vTaskDelay( 1000 / portTICK_PERIOD_MS);
+        if (ucContDistancia == MAX_WRITES_TASK)
+        {
+            ESP_LOGI(TAG_DISTANCIA, "Escrita Finalizada");
+            vTaskDelete(xTaskDistancia_Handle);
+        }
+        else if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        {
+            // ESP_LOGI(TAG_DISTANCIA, "Ecrita Realizada %u", ucContDistancia);
+            ucContDistancia += 1;
+            xSemaphoreGive(xMutexSemaphore);            
+            vTaskDelay( 100 / portTICK_PERIOD_MS);
+        }
     }
 }
 
@@ -128,7 +192,11 @@ void vTaskLeitura1(void *pvParameter)
 
     while(1)
     {
-        vTaskDelay( 1000 / portTICK_PERIOD_MS);
+        if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        {
+            xSemaphoreGive(xMutexSemaphore);            
+            vTaskDelay( 100 / portTICK_PERIOD_MS);
+        }
     }
 }
 
@@ -138,6 +206,10 @@ void vTaskLeitura2(void *pvParameter)
 
     while(1)
     {
-        vTaskDelay( 1000 / portTICK_PERIOD_MS);
+        if(xSemaphoreTake(xMutexSemaphore, portMAX_DELAY) == pdTRUE)
+        {
+            xSemaphoreGive(xMutexSemaphore);            
+            vTaskDelay( 100 / portTICK_PERIOD_MS);
+        }
     }
 }
