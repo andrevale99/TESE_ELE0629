@@ -1,3 +1,20 @@
+//
+//  @author Andre Menezes de Freitas Vale
+//  @date 13/04/24
+//
+//  @brief Atividade 03 da materia de Topicos Especiais
+//  em Sistemas Embarcados (ELE0629) utilizando Queu's e
+//  mutexs
+//
+//  @note A atividade consiste em criar 5 Tasks para escrita
+//  de dados (vTaskTemperatura, vTaskUmidade, vTaskVelocidade, vTaskPeso, vTaskDistancia) 
+//  e 2 Tasks para Leitura (vTaskLeitura1 e vTaskLeitura2).
+//  As de escrita devem compartilhar um mesmo buffer de 10 posicoes e
+//  escrever o nome da sua task 5 vezes e depois se deletar, ja as de Leitura 
+//  devem ler esse buffer e quando o buffer estiver vazio tambem devem 
+//  se deletarem
+//
+
 #include <stdio.h>
 
 #include "freertos/FreeRTOS.h"
@@ -13,50 +30,110 @@
 #define SIZE_BYTES_TASK 2048
 #define MAX_WRITES_TASK 5
 #define MAX_LENGTH_QUEU 10
+#define ALL_TASKS_DELETED 0x1F
+
+//===============================================================================
+//  VARS e FUNCS
+//===============================================================================
+
+//  @note Aqui são criadas os prototipos das Tasks, os Handles, as Tags
+//  os Semaphore e a Queu
 
 SemaphoreHandle_t xMutexSemaphore_TaskSensores = NULL;
 SemaphoreHandle_t xMutexSemaphore_TaskLeitura = NULL;
 QueueHandle_t xQueue = NULL;
 
+//  @note Esta variavel server para verificar se as tasks foram 
+//  deletadas apos as 5 escritas.
+//  Sera usado opecao bit a bit nas tasks de leitura para averiguar
+//  se as tasks foram apagadas (pra mim, eh a mesma coisa que o buffer
+//  estiver vazio).
 uint8_t ucTaskDeletedFlag = 0x00;
 
+//  @brief Task da Temperatura
+//  
+// @param pvParameter Parametros passados na hora do xTaskCreate
+//
+// @note Os parametros deverao ser tratados de acordo com seu tipo
+// dentro das tasks
 void vTaskTemperatura(void *pvParameter);
 TaskHandle_t xTaskTemperatura_Handle = NULL;
 const char *TAG_TEMPERATURA = "[TEMPERATURA]";
 
+//  @brief Task da Umidade
+//  
+// @param pvParameter Parametros passados na hora do xTaskCreate
+//
+// @note Os parametros deverao ser tratados de acordo com seu tipo
+// dentro das tasks
 void vTaskUmidade(void *pvParameter);
 TaskHandle_t xTaskUmidade_Handle = NULL;
 const char *TAG_UMIDADE = "[UMIDADE]";
 
+//  @brief Task da Velocidade
+//  
+// @param pvParameter Parametros passados na hora do xTaskCreate
+//
+// @note Os parametros deverao ser tratados de acordo com seu tipo
+// dentro das tasks
 void vTaskVelocidade(void *pvParameter);
 TaskHandle_t xTaskVelocidade_Handle = NULL;
 const char *TAG_VELOCIDADE = "[VELOCIDADE]";
 
+//  @brief Task da Peso
+//  
+// @param pvParameter Parametros passados na hora do xTaskCreate
+//
+// @note Os parametros deverao ser tratados de acordo com seu tipo
+// dentro das tasks
 void vTaskPeso(void *pvParameter);
 TaskHandle_t xTaskPeso_Handle = NULL;
 const char *TAG_PESO = "[PESO]";
 
+//  @brief Task da Distancia
+//  
+// @param pvParameter Parametros passados na hora do xTaskCreate
+//
+// @note Os parametros deverao ser tratados de acordo com seu tipo
+// dentro das tasks
 void vTaskDistancia(void *pvParameter);
 TaskHandle_t xTaskDistancia_Handle = NULL;
 const char *TAG_DISTANCIA = "[DISTACIA]";
 
+//  @brief Task da Leitura 1
+//  
+// @param pvParameter Parametros passados na hora do xTaskCreate
+//
+// @note Os parametros deverao ser tratados de acordo com seu tipo
+// dentro das tasks
 void vTaskLeitura1(void *pvParameter);
 TaskHandle_t xTaskleitura_1_Handle = NULL;
 const char *TAG_TASKLEITURA1 = "[TASKLEITURA_1]";
 
+//  @brief Task da Leitura 2
+//  
+// @param pvParameter Parametros passados na hora do xTaskCreate
+//
+// @note Os parametros deverao ser tratados de acordo com seu tipo
+// dentro das tasks
 void vTaskLeitura2(void *pvParameter);
 TaskHandle_t xTaskleitura_2_Handle = NULL;
 const char *TAG_TASKLEITURA2 = "[TASKLEITURA_2]";
 
+//===============================================================================
+//  APP_MAIN
+//===============================================================================
 void app_main(void)
 { 
+    //Ciracao dos mutex de escrita e leitura, e da Queu
     xMutexSemaphore_TaskSensores = xSemaphoreCreateMutex();
     xMutexSemaphore_TaskLeitura = xSemaphoreCreateMutex();
     xQueue = xQueueCreate(MAX_LENGTH_QUEU, sizeof(char)*15);
 
+    //Variavel para verificar se as tasks foram criadas
     BaseType_t iTestCreateTask = pdFAIL;    
 
-    iTestCreateTask = xTaskCreate(vTaskTemperatura, "Task Umidade", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+7, &xTaskTemperatura_Handle);
+    iTestCreateTask = xTaskCreate(vTaskTemperatura, "Task Umidade", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskTemperatura_Handle);
     if (iTestCreateTask == pdFAIL)
         ESP_LOGW(TAG_UMIDADE, "Erro ao criar a Task");
     
@@ -64,7 +141,7 @@ void app_main(void)
     if (iTestCreateTask == pdFAIL)
         ESP_LOGW(TAG_UMIDADE, "Erro ao criar a Task");
     
-    iTestCreateTask = xTaskCreate(vTaskVelocidade, "Task Velocidade", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+1, &xTaskVelocidade_Handle);
+    iTestCreateTask = xTaskCreate(vTaskVelocidade, "Task Velocidade", SIZE_BYTES_TASK, NULL, LOW_PRIORITY+7, &xTaskVelocidade_Handle);
     if (iTestCreateTask == pdFAIL)
         ESP_LOGW(TAG_VELOCIDADE, "Erro ao criar a Task");
     
@@ -85,6 +162,12 @@ void app_main(void)
         ESP_LOGW(TAG_TASKLEITURA2, "Erro ao criar a Task");
 }
 
+//===============================================================================
+//  FUNCS
+//===============================================================================
+
+// @note a Logica vai seguir a mesma para todas as tasks
+// de ESCRITA
 void vTaskTemperatura(void *pvParameter)
 {
     ESP_LOGI(TAG_TEMPERATURA, "Task Criada");
@@ -93,6 +176,7 @@ void vTaskTemperatura(void *pvParameter)
 
     while(1)
     {
+        //verifica se escreveu 5 vezes no buffer
         if (ucContTemperatura == MAX_WRITES_TASK)
         {
             ESP_LOGI(TAG_TEMPERATURA, "Escrita Finalizada");
@@ -101,12 +185,15 @@ void vTaskTemperatura(void *pvParameter)
 
             vTaskDelete(xTaskTemperatura_Handle);
         }
+        //Verifica se o mutex esta livre
         else if(xSemaphoreTake(xMutexSemaphore_TaskSensores, 1000 / portTICK_PERIOD_MS) == pdTRUE)
         {
+            //Verifica se a Queu pode ser escrita
             if(xQueueSend(xQueue, &ucDataTemperatura, portMAX_DELAY) == pdTRUE)
             {
                 // ESP_LOGW(TAG_TEMPERATURA, "Ecrita Realizada");
                 
+                //Incrementa o contador de escrita
                 ucContTemperatura += 1;
             }
             // else
@@ -117,6 +204,7 @@ void vTaskTemperatura(void *pvParameter)
         // else
         //     ESP_LOGW(TAG_TEMPERATURA, "Timeout Mutex");
         
+        //Delay aleatorio para a task
         vTaskDelay((esp_random()/0x004FFFFF)  / portTICK_PERIOD_MS);
     }   
 }
@@ -269,7 +357,7 @@ void vTaskLeitura1(void *pvParameter)
 
     while(1)
     {
-        if (ucTaskDeletedFlag == 0x1F)
+        if (ucTaskDeletedFlag == ALL_TASKS_DELETED)
         {
             ESP_LOGI(TAG_TASKLEITURA1, "Leitura 1 Finalizada");
             vTaskDelete(xTaskleitura_1_Handle);
@@ -301,7 +389,7 @@ void vTaskLeitura2(void *pvParameter)
 
     while(1)
     {
-        if (ucTaskDeletedFlag == 0x1F)
+        if (ucTaskDeletedFlag == ALL_TASKS_DELETED)
         {
             ESP_LOGI(TAG_TASKLEITURA2, "Leitura 1 Finalizada");
             vTaskDelete(xTaskleitura_2_Handle);
