@@ -9,17 +9,16 @@
 #include <driver/i2c.h>
 
 #include <esp_log.h>
+#include <esp_types.h>
 #include <esp_check.h>
-
-#include <mpu6050.h>
 
 #define TXD1_PIN        26
 #define RXD1_PIN        25
 #define RX_BUFFER_SIZE  256
 
-#define I2C_MASTER_SCL_IO   32                           
-#define I2C_MASTER_SDA_IO   33                           
-#define I2C_MASTER_FREQ_HZ  400000     
+#define I2C_MASTER_SCL_IO   22                           
+#define I2C_MASTER_SDA_IO   21                           
+#define I2C_MASTER_FREQ_HZ  100000     
 //===================================================================
 //  VARS & FUNCS
 //===================================================================
@@ -28,19 +27,14 @@ SemaphoreHandle_t xSemaphoreMutex = NULL; //Mutex para os dados do MPU
 //  @brief Task para envio dos dados do MPU
 //  pela serial
 void vTaskUART_TX(void *pvParameter);
-TaskHandle_t xUartHandle;
+TaskHandle_t xTaskUARTHandle;
 const char *TAG_UART = "[UART_TX]";
 
 // @brief Task para requisitar os dados do MPU
 void vTaskMPU(void *pvParameter);
-TaskHandle_t xMPUHandle = NULL;
+TaskHandle_t xTaskMPUHandle = NULL;
 const char *TAG_MPU = "[MPU]";
 
-mpu6050_handle_t xmpu6050Handle = NULL;
-mpu6050_raw_gyro_value_t xRawGyro = {};
-mpu6050_raw_acce_value_t xRawAcce = {};
-mpu6050_gyro_value_t xGyro = {};
-mpu6050_acce_value_t xAcce = {};
 // @brief Funcao de configuracao da Serial
 void vUart_Setup();
 
@@ -55,8 +49,9 @@ void app_main(void)
     vUart_Setup();
     vI2C_Setup();
 
-    xTaskCreate(vTaskUART_TX, "Task UART TX", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xUartHandle);
-
+    xTaskCreate(vTaskUART_TX, "Task UART TX", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskUARTHandle);
+    xTaskCreate(vTaskMPU, "Task MPU", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskMPUHandle);
+    
     while(1)
     {
         vTaskDelay( 1000 / portTICK_PERIOD_MS);
@@ -74,13 +69,17 @@ void vTaskUART_TX(void *pvParameter)
         // ESP_LOGI(TAG_UART, "Bytes Send: %d \t Message: %f", ucTxBytes, fData);
         // fData = 0.1 + fData;
 
-        vTaskDelay( pdMS_TO_TICKS(100) );
+        vTaskDelay( pdMS_TO_TICKS(1000) );
     }
 }
 
 void vTaskMPU(void *pvParameter)
 {
-
+    uint8_t ucDeviceId = 0;
+    while(1)
+    {
+        vTaskDelay( pdTICKS_TO_MS(1000) );
+    }
 }
 
 void vUart_Setup()
