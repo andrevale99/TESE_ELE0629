@@ -16,6 +16,8 @@
     "idf.port": "/dev/ttyUSB0",
     "idf.flashType": "UART",
     "files.associations": {
-        "cstdlib": "c"
+        "cstdlib": "c",
+        "semphr.h": "c",
+        "bme280.h": "c"
     }
 }
