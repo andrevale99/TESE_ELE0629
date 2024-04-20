@@ -2,10 +2,25 @@
 #define BME280_H
 
 #include <stdio.h>
+#include <esp_err.h>
+#include <esp_log.h>
+#include <esp_check.h>
 #include <driver/i2c.h>
 
-#define BME280_ADDRESS_0  0x76 //!< I2C address when SDO pin is low
-#define BME280_ADDRESS_1  0x77 //!< I2C address when SDO pin is high
+const char *TAG_BME280_H = "[BME280_H]";
+
+#define ACK 0x1
+#define NACK 0x0
+
+//  @brief Endereco do BME280
+//
+//  @note Quando SD0 estiver em 0 (Low)
+#define BME280_ADDRESS_0  0x76 
+
+//  @brief Endereco do BME280
+//
+//  @note Quando SD0 estiver em 1 (High)
+#define BME280_ADDRESS_1  0x77
 
 //  @brief The “id” register contains the chip
 //  identification number chip_id[7:0], which is 0x60
@@ -84,7 +99,7 @@
 //  @param BME280_HUM_LSB hum_lsb[7:0]
 #define BME280_HUM_LSB 0xFE
 
-struct Bme280_t
+typedef struct 
 {
     //Trimming Params Temperatura
     uint16_t T1;
@@ -116,6 +131,15 @@ struct Bme280_t
     //Id do sensor
     uint8_t device_id;
 
-}bme280Sen;
+} bme280_t;
+
+//  @brief Funcao para verificar a comunicacao com BME280
+//
+//  @param *dev Ponteiro da estrutura de dados do BME280
+//  @param port Qual dos canais I2C esta o sensor [I2C_PORT_NUM0 ... I2C_PORT_MAX-1]
+//  @param addr Endereco do BME280
+esp_err_t bme280_check(bme280_t *dev, i2c_port_t port, uint8_t addr);
+
+esp_err_t bme280_get_trimming_params(bme280_t *dev);
 
 #endif
