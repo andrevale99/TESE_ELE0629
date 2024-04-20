@@ -12,6 +12,8 @@
 #include <esp_types.h>
 #include <esp_check.h>
 
+#include "BME280.h"
+
 #define TXD1_PIN 26
 #define RXD1_PIN 25
 #define RX_BUFFER_SIZE 256
