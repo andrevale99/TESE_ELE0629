@@ -7,8 +7,6 @@
 #include <esp_check.h>
 #include <driver/i2c.h>
 
-const char *TAG_BME280_H = "[BME280_H]";
-
 #define ACK 0x1
 #define NACK 0x0
 

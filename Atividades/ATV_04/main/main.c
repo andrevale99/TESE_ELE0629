@@ -35,7 +35,7 @@ const char *TAG_UART = "[UART_TX]";
 // @brief Task para requisitar os dados do MPU
 void vTaskBME(void *pvParameter);
 TaskHandle_t xTaskBMEHandle = NULL;
-const char *TAG_BME = "[MPU]";
+const char *TAG_BME = "[BME]";
 
 // @brief Funcao de configuracao da Serial
 void vUart_Setup();
@@ -52,7 +52,7 @@ void app_main(void)
     vI2C_Setup();
 
     xTaskCreate(vTaskUART_TX, "Task UART TX", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskUARTHandle);
-    xTaskCreate(vTaskBME, "Task MPU", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskBMEHandle);
+    xTaskCreate(vTaskBME, "Task MPU", configMINIMAL_STACK_SIZE + 2048, NULL, 1, &xTaskBMEHandle);
 
     while (1)
     {
@@ -80,7 +80,8 @@ void vTaskBME(void *pvParameter)
     bme280_t bme280Sensor;
     while (1)
     {
-        bme280_check(&bme280Sensor, I2C_NUM_0, BME280_ADDRESS_0);
+        esp_err_t teste = bme280_check(&bme280Sensor, I2C_NUM_0, BME280_ADDRESS_0);
+        ESP_LOGI(TAG_BME, "Error: %d", teste);
         vTaskDelay(pdTICKS_TO_MS(1000));
     }
 }
