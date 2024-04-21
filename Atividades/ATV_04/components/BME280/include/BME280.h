@@ -5,7 +5,6 @@
 #include <esp_err.h>
 #include <esp_log.h>
 #include <esp_check.h>
-#include <driver/i2c.h>
 
 #define ACK 0x1
 #define NACK 0x0
@@ -122,9 +121,6 @@ typedef struct
     int16_t H4;
     int16_t H5;
     int8_t H6;
-
-    //I2c handle para comunicao i2c
-    i2c_cmd_handle_t i2c_bme280_handle;
 
     //Id do sensor
     uint8_t device_id;

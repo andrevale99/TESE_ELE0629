@@ -6,7 +6,7 @@
 #include <freertos/queue.h>
 
 #include <driver/uart.h>
-#include <driver/i2c.h>
+#include <driver/i2c_master.h>
 
 #include <esp_log.h>
 #include <esp_types.h>
@@ -52,7 +52,7 @@ void app_main(void)
     vI2C_Setup();
 
     xTaskCreate(vTaskUART_TX, "Task UART TX", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskUARTHandle);
-    xTaskCreate(vTaskBME, "Task MPU", configMINIMAL_STACK_SIZE + 2048, NULL, 1, &xTaskBMEHandle);
+    xTaskCreate(vTaskBME, "Task MPU", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskBMEHandle);
 
     while (1)
     {
@@ -112,17 +112,18 @@ void vI2C_Setup()
 {
     ESP_LOGI("[I2C CONF]", "Configurando o I2C");
 
-    i2c_config_t i2c_config = {
-        .mode = I2C_MODE_MASTER,
-        .sda_io_num = I2C_MASTER_SDA_IO,
-        .sda_pullup_en = GPIO_PULLUP_ENABLE,
+    i2c_master_bus_config_t i2c_mst_config = {
+        .clk_source = I2C_CLK_SRC_DEFAULT,
+        .i2c_port = I2C_NUM_0,
         .scl_io_num = I2C_MASTER_SCL_IO,
-        .scl_pullup_en = GPIO_PULLUP_ENABLE,
-        .master.clk_speed = I2C_MASTER_FREQ_HZ,
+        .sda_io_num = I2C_MASTER_SDA_IO,
+        .glitch_ignore_cnt = 7,
+        .flags.enable_internal_pullup = true,
     };
 
-    ESP_ERROR_CHECK(i2c_param_config(I2C_NUM_0, &i2c_config));
-    ESP_ERROR_CHECK(i2c_driver_install(I2C_NUM_0, I2C_MODE_MASTER, 0, 0, 0));
+    i2c_master_bus_handle_t i2c_master_handle;
+
+    ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &i2c_master_handle));
 
     ESP_LOGI("[I2C CONF]", "Configuracao da I2C FINALIZADA");
 }
