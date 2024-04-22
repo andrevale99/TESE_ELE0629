@@ -42,6 +42,7 @@ void vUart_Setup();
 
 //  @brief Funcao de configuracao do I2C
 void vI2C_Setup();
+i2c_master_bus_handle_t i2c_master_handle;
 
 //===================================================================
 //  APP MAIN
@@ -78,10 +79,24 @@ void vTaskUART_TX(void *pvParameter)
 void vTaskBME(void *pvParameter)
 {
     bme280_t bme280Sensor;
+
+    i2c_master_dev_handle_t bme280Device_handle;
+
+    i2c_device_config_t bme280Device_config = 
+    {
+        .device_address = BME280_ADDRESS_0,
+        .dev_addr_length = I2C_ADDR_BIT_7,
+        .scl_speed_hz = I2C_MASTER_FREQ_HZ
+    };
+
+    ESP_ERROR_CHECK(i2c_master_bus_add_device(i2c_master_handle, 
+                    &bme280Device_config, &bme280Device_handle));
+
+    if(bme280_get_trimming_params(&bme280Sensor, bme280Device_handle) == ESP_OK)
+        ESP_LOGI(TAG_BME, "Parametros Carregados");
+    
     while (1)
     {
-        esp_err_t teste = bme280_check(&bme280Sensor, I2C_NUM_0, BME280_ADDRESS_0);
-        ESP_LOGI(TAG_BME, "Error: %d", teste);
         vTaskDelay(pdTICKS_TO_MS(1000));
     }
 }
@@ -120,8 +135,6 @@ void vI2C_Setup()
         .glitch_ignore_cnt = 7,
         .flags.enable_internal_pullup = true,
     };
-
-    i2c_master_bus_handle_t i2c_master_handle;
 
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &i2c_master_handle));
 

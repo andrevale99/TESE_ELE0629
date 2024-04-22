@@ -3,8 +3,8 @@
 
 #include <stdio.h>
 #include <esp_err.h>
-#include <esp_log.h>
-#include <esp_check.h>
+
+#include <driver/i2c_master.h>
 
 #define ACK 0x1
 #define NACK 0x0
@@ -122,18 +122,34 @@ typedef struct
     int16_t H5;
     int8_t H6;
 
+    //Variavel para verificacao de erro
+    esp_err_t err_bme;
+
+    //Variavel para espera de mensagem
+    int Timeout;
+
     //Id do sensor
     uint8_t device_id;
 
 } bme280_t;
 
-//  @brief Funcao para verificar a comunicacao com BME280
+//  @brief Confiura o tempo em ms para espera na porta i2c
 //
-//  @param *dev Ponteiro da estrutura de dados do BME280
-//  @param port Qual dos canais I2C esta o sensor [I2C_PORT_NUM0 ... I2C_PORT_MAX-1]
-//  @param addr Endereco do BME280
-esp_err_t bme280_check(bme280_t *dev, i2c_port_t port, uint8_t addr);
+//  @param *bme280 Endereco da estrutura bme280_t
+//  @param _timeout Tempo de espera em ms
+//
+//  @note Caso o Timeout seja -1, o tempo sera infinito
+void bme280_set_timeout(bme280_t *bme280, int _timeout_ms);
 
-esp_err_t bme280_get_trimming_params(bme280_t *dev);
+//  @brief Funcao para pegar os dados de calibracao para a Temperatura
+//  e Pressao
+//
+//  @param *bme280 Endereco da estrutura bme280_t
+//  @param dev_handle copia do i2c_master_dev_handle_t
+//
+//  @return ESP_OK Caso todos os parametros foram gravados
+//  @return ESP_ERR_TIMEOUT Caso o tempo de espera tenha estourado
+//  @return ESP_ERR_INVALID_ARG Erro em algum parametro
+esp_err_t bme280_get_trimming_params(bme280_t *bme280, i2c_master_dev_handle_t dev_handle);
 
 #endif
