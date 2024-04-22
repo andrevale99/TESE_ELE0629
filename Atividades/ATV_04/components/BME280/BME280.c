@@ -25,3 +25,16 @@ esp_err_t bme280_get_trimming_params(bme280_t *bme280, i2c_master_dev_handle_t d
 
     return bme280->err_bme;
 }
+
+void bme280_get_temperature(bme280_t *bme280, int32_t adc_T, int32_t *fine_temp)
+{
+    int32_t var1 = 0, var2 = 0;
+
+    var1 =  ((((adc_T>>3) - ((int32_t)bme280->T1 << 1))) * ((int32_t)bme280->T2)) >> 11;
+
+    var2 = ((((adc_T>>4) - ((int32_t)bme280->T1)) * ((adc_T >> 4) - ((int32_t)bme280->T1)) >> 12) * ((int32_t)bme280->T3)) >> 14;
+
+    *fine_temp = var1 + var2;
+
+    bme280->Temperature = (*fine_temp * 5 + 128) >> 8;
+}

@@ -102,6 +102,8 @@ typedef struct
     uint16_t T1;
     int16_t T2;
     int16_t T3;
+
+    int32_t Temperature;
     
     //Trimming Params Pressao
     uint16_t P1;
@@ -114,6 +116,8 @@ typedef struct
     int16_t P8;
     int16_t P9;
 
+    uint32_t Pressure;
+
     //Trimming Params Umidade
     uint8_t H1;
     int16_t H2;
@@ -121,6 +125,8 @@ typedef struct
     int16_t H4;
     int16_t H5;
     int8_t H6;
+
+    uint32_t Humidity;
 
     //Variavel para verificacao de erro
     esp_err_t err_bme;
@@ -151,5 +157,12 @@ void bme280_set_timeout(bme280_t *bme280, int _timeout_ms);
 //  @return ESP_ERR_TIMEOUT Caso o tempo de espera tenha estourado
 //  @return ESP_ERR_INVALID_ARG Erro em algum parametro
 esp_err_t bme280_get_trimming_params(bme280_t *bme280, i2c_master_dev_handle_t dev_handle);
+
+//  @brief faz a leitura da temperatura
+//
+//  @param *bme280 Endereco da estrutura bme280_t
+//  @param adc_T Leitura dos registradores de Temperatura do BME280 (0xFA...0xFC)
+//  @param *fine_temp Valor global da temperatura
+void bme280_get_temperature(bme280_t *bme280, int32_t adc_T, int32_t *fine_temp);
 
 #endif
