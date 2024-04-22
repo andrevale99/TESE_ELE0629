@@ -78,7 +78,7 @@ void vTaskUART_TX(void *pvParameter)
 
 void vTaskBME(void *pvParameter)
 {
-    bme280_t bme280Sensor;
+    bme280_t bme280;
 
     i2c_master_dev_handle_t bme280Device_handle;
 
@@ -89,10 +89,12 @@ void vTaskBME(void *pvParameter)
         .scl_speed_hz = I2C_MASTER_FREQ_HZ
     };
 
+    bme280_set_timeout(&bme280, 1000);
+
     ESP_ERROR_CHECK(i2c_master_bus_add_device(i2c_master_handle, 
                     &bme280Device_config, &bme280Device_handle));
 
-    if(bme280_get_trimming_params(&bme280Sensor, bme280Device_handle) == ESP_OK)
+    if(bme280_get_trimming_params(&bme280, bme280Device_handle) == ESP_OK)
         ESP_LOGI(TAG_BME, "Parametros Carregados");
     
     while (1)
