@@ -52,13 +52,8 @@ void app_main(void)
     vUart_Setup();
     vI2C_Setup();
 
-    xTaskCreate(vTaskUART_TX, "Task UART TX", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskUARTHandle);
-    xTaskCreate(vTaskBME, "Task MPU", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskBMEHandle);
-
-    while (1)
-    {
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
+    xTaskCreate(vTaskUART_TX, "TaskUARTTX", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskUARTHandle);
+    xTaskCreate(vTaskBME, "TaskBME", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskBMEHandle);
 }
 
 //===================================================================
@@ -68,11 +63,7 @@ void vTaskUART_TX(void *pvParameter)
 {
     while (1)
     {
-        // ucTxBytes = uart_write_bytes(UART_NUM_1, &fData, ucLenData);
-        // ESP_LOGI(TAG_UART, "Bytes Send: %d \t Message: %f", ucTxBytes, fData);
-        // fData = 0.1 + fData;
-
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 }
 
@@ -89,17 +80,16 @@ void vTaskBME(void *pvParameter)
         .scl_speed_hz = I2C_MASTER_FREQ_HZ
     };
 
-    bme280_set_timeout(&bme280, 1000);
+    bme280_set_timeout(&bme280, 100);
 
     ESP_ERROR_CHECK(i2c_master_bus_add_device(i2c_master_handle, 
                     &bme280Device_config, &bme280Device_handle));
 
-    if(bme280_get_trimming_params(&bme280, bme280Device_handle) == ESP_OK)
-        ESP_LOGI(TAG_BME, "Parametros Carregados");
-    
+    bme280_get_trimming_params_temp(&bme280, bme280Device_handle);
+
     while (1)
     {
-        vTaskDelay(pdTICKS_TO_MS(1000));
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
