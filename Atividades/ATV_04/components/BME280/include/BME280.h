@@ -3,6 +3,7 @@
 
 #include <stdio.h>
 #include <esp_err.h>
+#include <esp_log.h>
 
 #include <driver/i2c_master.h>
 
@@ -147,8 +148,8 @@ typedef struct
 //  @note Caso o Timeout seja -1, o tempo sera infinito
 void bme280_set_timeout(bme280_t *bme280, int _timeout_ms);
 
-//  @brief Funcao para pegar os dados de calibracao para a Temperatura
-//  e Pressao
+//  @brief Funcao para pegar os dados de calibracao 
+//  para a Temperatura
 //
 //  @param *bme280 Endereco da estrutura bme280_t
 //  @param dev_handle copia do i2c_master_dev_handle_t
@@ -156,7 +157,7 @@ void bme280_set_timeout(bme280_t *bme280, int _timeout_ms);
 //  @return ESP_OK Caso todos os parametros foram gravados
 //  @return ESP_ERR_TIMEOUT Caso o tempo de espera tenha estourado
 //  @return ESP_ERR_INVALID_ARG Erro em algum parametro
-esp_err_t bme280_get_trimming_params(bme280_t *bme280, i2c_master_dev_handle_t dev_handle);
+void bme280_get_trimming_params_temp(bme280_t *bme280, i2c_master_dev_handle_t dev_handle);
 
 //  @brief faz a leitura da temperatura
 //
@@ -165,4 +166,5 @@ esp_err_t bme280_get_trimming_params(bme280_t *bme280, i2c_master_dev_handle_t d
 //  @param *fine_temp Valor global da temperatura
 void bme280_get_temperature(bme280_t *bme280, int32_t adc_T, int32_t *fine_temp);
 
+void bme280_read_16bits(bme280_t *bme280, uint8_t addr, i2c_master_dev_handle_t dev_handle);
 #endif
