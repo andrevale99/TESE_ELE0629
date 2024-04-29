@@ -37,6 +37,8 @@ void vTaskBME(void *pvParameter);
 TaskHandle_t xTaskBMEHandle = NULL;
 const char *TAG_BME = "[BME]";
 
+int32_t Temperatura = 0;
+
 // @brief Funcao de configuracao da Serial
 void vUart_Setup();
 
@@ -49,9 +51,11 @@ i2c_master_bus_handle_t i2c_master_handle;
 //===================================================================
 void app_main(void)
 {
+    xSemaphoreMutex = xSemaphoreCreateMutex();
+    
     vUart_Setup();
     vI2C_Setup();
-
+    
     xTaskCreate(vTaskUART_TX, "TaskUARTTX", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskUARTHandle);
     xTaskCreate(vTaskBME, "TaskBME", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskBMEHandle);
 }
@@ -61,9 +65,17 @@ void app_main(void)
 //===================================================================
 void vTaskUART_TX(void *pvParameter)
 {
+    uint8_t len_Temperatura = sizeof(Temperatura);
+
     while (1)
     {
-        vTaskDelay(pdMS_TO_TICKS(100));
+        if(xSemaphoreTake(xSemaphoreMutex, 1000 / portTICK_PERIOD_MS) == pdTRUE)
+        {
+            int txBytes = uart_write_bytes(UART_NUM_1, &Temperatura, len_Temperatura);
+            // ESP_LOGI(TAG_UART, "Tx bytes: %i", txBytes);
+            xSemaphoreGive(xSemaphoreMutex); 
+        }
+        vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
 
@@ -87,8 +99,25 @@ void vTaskBME(void *pvParameter)
 
     bme280_get_trimming_params_temp(&bme280, bme280Device_handle);
 
+
+    uint8_t addrs_adc_T[] = {BME280_TEMP_MSB , BME280_TEMP_LSB };
+    uint8_t buffer[] = {0, 0};
+    int32_t adc_T = 0;
+    int32_t *fine_temp = 0;
     while (1)
     {
+        i2c_master_transmit_receive(bme280Device_handle, &addrs_adc_T, 2,
+                                    &buffer, 2, bme280.Timeout);
+        
+        adc_T = (int32_t)(buffer[0] << 8) | buffer[1];
+        
+        if(xSemaphoreTake(xSemaphoreMutex, 1000 / portTICK_PERIOD_MS) == pdTRUE)
+        {
+            bme280_get_temperature(&bme280, adc_T, &fine_temp);
+            Temperatura = bme280.Temperatura;
+            
+            xSemaphoreGive(xSemaphoreMutex); 
+        }
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 }
