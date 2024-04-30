@@ -166,5 +166,4 @@ void bme280_get_trimming_params_temp(bme280_t *bme280, i2c_master_dev_handle_t d
 //  @param *fine_temp Valor global da temperatura
 void bme280_get_temperature(bme280_t *bme280, int32_t adc_T, int32_t *fine_temp);
 
-void bme280_read_16bits(bme280_t *bme280, uint8_t addr, i2c_master_dev_handle_t dev_handle);
 #endif
