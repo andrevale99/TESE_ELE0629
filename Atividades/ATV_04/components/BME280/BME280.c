@@ -15,7 +15,7 @@ void bme280_get_trimming_params_temp(bme280_t *bme280, i2c_master_dev_handle_t d
     i2c_master_transmit_receive(dev_handle, &AddrTrimming, 2, 
                                 &aux, 2, bme280->Timeout);
 
-    bme280->T1 = (aux[1] << 8) | aux[0];
+    bme280->T1 = (uint16_t)(aux[1] << 8) | aux[0];
     ESP_LOGI(TAG, "Param T1: %u", bme280->T1);
 
     AddrTrimming[0] += 0x02;
@@ -23,7 +23,7 @@ void bme280_get_trimming_params_temp(bme280_t *bme280, i2c_master_dev_handle_t d
     i2c_master_transmit_receive(dev_handle, &AddrTrimming, 2, 
                                 &aux, 2, bme280->Timeout);
     
-    bme280->T2 = (aux[1] << 8) | aux[0];    
+    bme280->T2 = (uint16_t)(aux[1] << 8) | aux[0];    
     ESP_LOGI(TAG, "Param T2: %i", bme280->T2);
     
     AddrTrimming[0] += 0x02;
@@ -31,7 +31,7 @@ void bme280_get_trimming_params_temp(bme280_t *bme280, i2c_master_dev_handle_t d
     i2c_master_transmit_receive(dev_handle, &AddrTrimming, 2, 
                                 &aux, 2, bme280->Timeout);
     
-    bme280->T3 = (aux[1] << 8) | aux[0];    
+    bme280->T3 = (uint16_t)(aux[1] << 8) | aux[0];    
     ESP_LOGI(TAG, "Param T3: %i", bme280->T3);
 }
 
