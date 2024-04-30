@@ -109,7 +109,7 @@ void vTaskBME(void *pvParameter)
         i2c_master_transmit_receive(bme280Device_handle, &addrs_adc_T, 2,
                                     &buffer, 2, bme280.Timeout);
         
-        adc_T = (int32_t)(buffer[0] << 8) | buffer[1];
+        adc_T = ((int32_t)buffer[0] << 8) | ((int32_t)buffer[1]);
         
         if(xSemaphoreTake(xSemaphoreMutex, 1000 / portTICK_PERIOD_MS) == pdTRUE)
         {
