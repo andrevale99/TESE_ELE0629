@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <esp_err.h>
 #include <esp_log.h>
+#include <esp_check.h>
 
 #include <driver/i2c_master.h>
 
@@ -97,6 +98,11 @@
 //  @param BME280_HUM_LSB hum_lsb[7:0]
 #define BME280_HUM_LSB 0xFE
 
+#define BME280_MODE_SLEEP 0x0
+#define BME280_MODE_FORCED_1 0x1
+#define BME280_MODE_FORCED_2 0x2
+#define BME280_MODE_NORMAL 0x3
+
 typedef struct 
 {
     //Trimming Params Temperatura
@@ -129,14 +135,14 @@ typedef struct
 
     uint32_t Humidity;
 
-    //Variavel para verificacao de erro
-    esp_err_t err_bme;
-
     //Variavel para espera de mensagem
     int Timeout;
 
     //Id do sensor
     uint8_t device_id;
+
+    //Mode
+    uint8_t mode;
 
 } bme280_t;
 
@@ -159,11 +165,13 @@ void bme280_set_timeout(bme280_t *bme280, int _timeout_ms);
 //  @return ESP_ERR_INVALID_ARG Erro em algum parametro
 void bme280_get_trimming_params_temp(bme280_t *bme280, i2c_master_dev_handle_t dev_handle);
 
+esp_err_t bme280_set_mode(bme280_t *bme280, i2c_master_dev_handle_t dev_handle, uint8_t mode);
+
 //  @brief faz a leitura da temperatura
 //
 //  @param *bme280 Endereco da estrutura bme280_t
 //  @param adc_T Leitura dos registradores de Temperatura do BME280 (0xFA...0xFC)
 //  @param *fine_temp Valor global da temperatura
-void bme280_get_temperature(bme280_t *bme280, int32_t adc_T, int32_t *fine_temp);
+void bme280_get_temperature(bme280_t *bme280, int32_t adc_T);
 
 #endif
