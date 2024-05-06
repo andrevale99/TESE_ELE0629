@@ -24,7 +24,7 @@
 //===================================================================
 //  VARS & FUNCS
 //===================================================================
-SemaphoreHandle_t xSemaphoreMutex = NULL; // Mutex para os dados do BME
+SemaphoreHandle_t xSemaphoreBinario = NULL; // Mutex para os dados do BME
 
 //  @brief Task para envio dos dados do MPU
 //  pela serial
@@ -47,7 +47,7 @@ void app_main(void)
 {
     esp_log_level_set("*", ESP_LOG_DEBUG);
 
-    // xSemaphoreMutex = xSemaphoreCreateMutex();
+    xSemaphoreBinario = xSemaphoreCreateBinary();
 
     ESP_LOGI("[UART CONF]", "Configurando a UART");
 
@@ -104,9 +104,12 @@ void vTaskUART_TX(void *pvParameter)
 
     while (1)
     {
-        snprintf(buffer, 5, "%ld", Temperatura);
-        txBytes = uart_write_bytes(UART_NUM_1, buffer, sizeof(buffer));
-        ESP_LOGI(TAG_UART, "Tx bytes: %i | MSG: %s", txBytes, &buffer[0]);
+        if (xSemaphoreTake(xSemaphoreBinario, portMAX_DELAY) == pdTRUE)
+        {
+            snprintf(buffer, 5, "%ld", Temperatura);
+            txBytes = uart_write_bytes(UART_NUM_1, buffer, sizeof(buffer));
+            ESP_LOGI(TAG_UART, "Tx bytes: %i | MSG: %s", txBytes, &buffer[0]);
+        }
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
@@ -129,6 +132,9 @@ void vTaskBMP(void *pvParameter)
 
     bmp280_set_timeout(&bmp280, 1000);
 
+    //Delay para estabilizar o sensor
+    vTaskDelay( pdMS_TO_TICKS(10) );
+
     bmp280_set_standby(&bmp280, dev_handle, TSB1000);
     bmp280_set_oversamplig(&bmp280, dev_handle, SKIP, x1);
     bmp280_set_mode(&bmp280, dev_handle, NORMAL);
@@ -145,6 +151,8 @@ void vTaskBMP(void *pvParameter)
             bmp280_get_compesate_temperature(&bmp280, bmp280.adc_T, &fine_temp);
 
             Temperatura = bmp280.Temperature;
+
+            xSemaphoreGive(xSemaphoreBinario);
         }
     }
 }
