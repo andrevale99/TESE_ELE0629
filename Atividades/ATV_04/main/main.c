@@ -12,7 +12,7 @@
 #include <esp_types.h>
 #include <esp_check.h>
 
-#include <BME280.h>
+#include <BMP280.h>
 
 #define TXD1_PIN 26
 #define RXD1_PIN 25
@@ -88,7 +88,7 @@ void app_main(void)
     {
         vTaskDelay(pdMS_TO_TICKS(1000));
 
-        ESP_LOGI("[MAIN]", "Main");
+        // ESP_LOGI("[MAIN]", "Main");
     }
 }
 
@@ -113,7 +113,11 @@ void vTaskBME(void *pvParameter)
 {
     esp_err_t xError = ESP_FAIL;
 
-   i2c_device_config_t dev_cfg = {
+    uint8_t adc_T_regs[] = {BMP280_TEMP_MSB, BMP280_TEMP_LSB};
+    int32_t adc_T = 0;
+    uint8_t buffer[2];
+
+    i2c_device_config_t dev_cfg = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
         .device_address = 0x76,
         .scl_speed_hz = I2C_MASTER_FREQ_HZ,
@@ -121,32 +125,38 @@ void vTaskBME(void *pvParameter)
 
     i2c_master_dev_handle_t dev_handle;
     i2c_master_bus_add_device(i2c_master_handle, &dev_cfg, &dev_handle);
-        
-    bme280_t bme280;
 
-    bme280_set_timeout(&bme280, 1000);
+    bmp280_t bmp280;
 
-    bme280_get_trimming_params_temp(&bme280, dev_handle);
+    bmp280_set_timeout(&bmp280, 1000);
 
-    bme280_set_mode(&bme280, dev_handle, 0x20 | BME280_MODE_NORMAL);
+    bmp280_set_standby(&bmp280, dev_handle, 0b101);
+    bmp280_set_oversamplig(&bmp280, dev_handle, SKIP, x1);
+    
+    buffer[0] = BMP280_CTRL_MEAS;
 
-    uint8_t addr = 0xF7;
-    esp_err_t t = ESP_FAIL;
+    i2c_master_transmit_receive(dev_handle, &buffer[0], 1, &buffer[1], 1, 100);
+    ESP_LOGW(TAG_BME, "%X : %X", buffer[0], buffer[1]);
+    // bmp280_set_mode(&bmp280, dev_handle, bmp280_MODE_NORMAL);
 
-    uint8_t adc_T_regs[] = {BME280_TEMP_MSB, BME280_TEMP_LSB};
-    int32_t adc_T = 0;
-    uint8_t buffer[2];
+    vTaskDelay(pdMS_TO_TICKS(50));
 
-    while(1)
+
+    bmp280_get_trimming_params_temp(&bmp280, dev_handle);
+
+    while (1)
     {
-        vTaskDelay( pdMS_TO_TICKS( 1000 ));
+        vTaskDelay(pdMS_TO_TICKS(2000));
 
-        t = i2c_master_transmit_receive(dev_handle, &adc_T_regs[0], 2, &buffer[0], 2, bme280.Timeout);
-        ESP_LOGW(TAG_BME, "%s", esp_err_to_name(t));
+        // if (!(bmp280_is_measuring(&bmp280, dev_handle)))
+        // {
+        //     xError = i2c_master_transmit_receive(dev_handle, &adc_T_regs[0], 2, &buffer[0], 2, bmp280.Timeout);
+        //     ESP_LOGW(TAG_BME, "%s", esp_err_to_name(xError));
 
-        adc_T = ((uint32_t)buffer[0]) | ((uint32_t)buffer[1]);
+        //     adc_T = ((uint32_t)buffer[0]) | ((uint32_t)buffer[1]);
 
-        bme280_get_temperature(&bme280, adc_T);
-        ESP_LOGI(TAG_BME, "Temperatura: %li", bme280.Temperature);
+        //     bmp280_get_temperature(&bmp280, adc_T);
+        //     ESP_LOGI(TAG_BME, "Temperatura: %li", bmp280.Temperature);
+        // }
     }
 }
