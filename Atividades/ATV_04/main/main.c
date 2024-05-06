@@ -33,9 +33,9 @@ TaskHandle_t xTaskUARTHandle;
 const char *TAG_UART = "[UART_TX]";
 
 // @brief Task para requisitar os dados do MPU
-void vTaskBME(void *pvParameter);
-TaskHandle_t xTaskBMEHandle = NULL;
-const char *TAG_BME = "[BME]";
+void vTaskBMP(void *pvParameter);
+TaskHandle_t xTaskBMPHandle = NULL;
+const char *TAG_BMP = "[BMP]";
 
 int32_t Temperatura = 0;
 
@@ -45,6 +45,8 @@ static i2c_master_bus_handle_t i2c_master_handle;
 //===================================================================
 void app_main(void)
 {
+    esp_log_level_set("*", ESP_LOG_DEBUG);
+
     // xSemaphoreMutex = xSemaphoreCreateMutex();
 
     ESP_LOGI("[UART CONF]", "Configurando a UART");
@@ -81,8 +83,8 @@ void app_main(void)
 
     ESP_LOGI("[I2C CONF]", "Configuracao da I2C FINALIZADA");
 
-    xTaskCreate(vTaskBME, "TaskBME", configMINIMAL_STACK_SIZE + 4096, NULL, 1, &xTaskBMEHandle);
-    // xTaskCreate(vTaskUART_TX, "TaskUARTTX", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskUARTHandle);
+    xTaskCreate(vTaskBMP, "TaskBMP", configMINIMAL_STACK_SIZE + 4096, NULL, 1, &xTaskBMPHandle);
+    xTaskCreate(vTaskUART_TX, "TaskUARTTX", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskUARTHandle);
 
     while (1)
     {
@@ -97,44 +99,39 @@ void app_main(void)
 //===================================================================
 void vTaskUART_TX(void *pvParameter)
 {
-    uint8_t len_Temperatura = sizeof(Temperatura);
     int txBytes = -1;
+    char buffer[5];
 
     while (1)
     {
-        txBytes = uart_write_bytes(UART_NUM_1, &Temperatura, len_Temperatura);
-        ESP_LOGI(TAG_UART, "Tx bytes: %i", txBytes);
+        snprintf(buffer, 5, "%ld", Temperatura);
+        txBytes = uart_write_bytes(UART_NUM_1, buffer, sizeof(buffer));
+        ESP_LOGI(TAG_UART, "Tx bytes: %i | MSG: %s", txBytes, &buffer[0]);
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 
-void vTaskBME(void *pvParameter)
+void vTaskBMP(void *pvParameter)
 {
-    esp_err_t xError = ESP_FAIL;
+    bmp280_t bmp280;
 
-    uint8_t adc_T_regs[] = {BMP280_TEMP_MSB, BMP280_TEMP_LSB};
-    int32_t adc_T = 0;
-    uint8_t buffer[2];
+    int32_t fine_temp = 0;
 
     i2c_device_config_t dev_cfg = {
         .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-        .device_address = 0x76,
+        .device_address = BMP280_ADDRESS_0,
         .scl_speed_hz = I2C_MASTER_FREQ_HZ,
     };
 
     i2c_master_dev_handle_t dev_handle;
     i2c_master_bus_add_device(i2c_master_handle, &dev_cfg, &dev_handle);
 
-    bmp280_t bmp280;
-
     bmp280_set_timeout(&bmp280, 1000);
 
-    bmp280_set_standby(&bmp280, dev_handle, 0b101);
+    bmp280_set_standby(&bmp280, dev_handle, TSB1000);
     bmp280_set_oversamplig(&bmp280, dev_handle, SKIP, x1);
     bmp280_set_mode(&bmp280, dev_handle, NORMAL);
-
-    vTaskDelay(pdMS_TO_TICKS(50));
 
     bmp280_get_trimming_params_temp(&bmp280, dev_handle);
 
@@ -144,13 +141,10 @@ void vTaskBME(void *pvParameter)
 
         if (!(bmp280_is_measuring(&bmp280, dev_handle)))
         {
-            xError = i2c_master_transmit_receive(dev_handle, &adc_T_regs[0], 2, &buffer[0], 2, bmp280.Timeout);
-            // ESP_LOGW(TAG_BME, "%s", esp_err_to_name(xError));
+            bmp280_get_adc_T_P(&bmp280, dev_handle);
+            bmp280_get_compesate_temperature(&bmp280, bmp280.adc_T, &fine_temp);
 
-            adc_T = ((uint32_t)buffer[0] << 8) | ((uint32_t)buffer[1]);
-
-            bmp280_get_temperature(&bmp280, adc_T);
-            ESP_LOGI(TAG_BME, "Temperatura: %li", bmp280.Temperature);
+            Temperatura = bmp280.Temperature;
         }
     }
 }
