@@ -1,12 +1,12 @@
 #include "BMP280.h"
 
-const char *TAG = "[BM280_H]";
+const char *TAG = "[BMP280_H]";
 
 esp_err_t xError = ESP_FAIL;
 
-const uint8_t len_buffer = 2;
+const uint8_t len_buffer = 3;
 uint8_t idx = 0;
-uint8_t buffer[2];
+uint8_t buffer[3];
 
 void reset_buffer()
 {
@@ -21,30 +21,28 @@ void bmp280_set_timeout(bmp280_t *bmp280, int _timeout_ms)
 
 void bmp280_get_trimming_params_temp(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handle)
 {
-    uint8_t AddrTrimming[] = {0x88, 0x89};
+    uint8_t AddrTrimming= 0x88;
     reset_buffer();
 
-    i2c_master_transmit_receive(dev_handle, &AddrTrimming[0], 2,
+    i2c_master_transmit_receive(dev_handle, &AddrTrimming, 1,
                                 &buffer[0], 2, bmp280->Timeout);
 
     bmp280->T1 = (uint16_t)(((uint16_t)buffer[1] << 8) | buffer[0]);
-    ESP_LOGI(TAG, "Param T1 (%x | %x): %u", AddrTrimming[0], AddrTrimming[1],bmp280->T1);
+    // ESP_LOGI(TAG, "Param T1 (%x | %x): %u", AddrTrimming, AddrTrimming + 1,bmp280->T1);
 
-    AddrTrimming[0] += 0x02;
-    AddrTrimming[1] += 0x02;
-    i2c_master_transmit_receive(dev_handle, &AddrTrimming[0], 2,
+    AddrTrimming += 0x02;
+    i2c_master_transmit_receive(dev_handle, &AddrTrimming, 1,
                                 &buffer[0], 2, bmp280->Timeout);
 
     bmp280->T2 = (int16_t)(((int16_t)buffer[1] << 8) | buffer[0]);
-    ESP_LOGI(TAG, "Param T1 (%x | %x): %u", AddrTrimming[0], AddrTrimming[1],bmp280->T2);
+    // ESP_LOGI(TAG, "Param T2 (%x | %x): %u", AddrTrimming, AddrTrimming + 1,bmp280->T2);
 
-    AddrTrimming[0] += 0x02;
-    AddrTrimming[1] += 0x02;
-    i2c_master_transmit_receive(dev_handle, &AddrTrimming[0], 2,
+    AddrTrimming += 0x02;
+    i2c_master_transmit_receive(dev_handle, &AddrTrimming, 1,
                                 &buffer[0], 2, bmp280->Timeout);
 
     bmp280->T3 = (int16_t)(((int16_t)buffer[1] << 8) | buffer[0]);
-    ESP_LOGI(TAG, "Param T1 (%x | %x): %u", AddrTrimming[0], AddrTrimming[1],bmp280->T3);
+    // ESP_LOGI(TAG, "Param T3 (%x | %x): %u", AddrTrimming, AddrTrimming + 1,bmp280->T3);
 }
 
 esp_err_t bmp280_set_mode(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handle, uint8_t mode)
@@ -105,43 +103,43 @@ esp_err_t bmp280_set_standby(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handl
 
     switch (standby)
     {
-    case T0_5:
-        buffer[1] |= (T0_5 << 5);
+    case TSB0_5:
+        buffer[1] |= (TSB0_5 << 5);
         xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
         break;
 
-    case T62_5:
-        buffer[1] |= (T62_5 << 5);
+    case TSB62_5:
+        buffer[1] |= (TSB62_5 << 5);
         xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
         break;
 
-    case T125:
-        buffer[1] |= (T125 << 5);
+    case TSB125:
+        buffer[1] |= (TSB125 << 5);
         xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
         break;
 
-    case T250:
-        buffer[1] |= (T250 << 5);
+    case TSB250:
+        buffer[1] |= (TSB250 << 5);
         xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
         break;
 
-    case T500:
-        buffer[1] |= (T500 << 5);
+    case TSB500:
+        buffer[1] |= (TSB500 << 5);
         xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
         break;
 
-    case T1000:
-        buffer[1] |= (T1000 << 5);
+    case TSB1000:
+        buffer[1] |= (TSB1000 << 5);
         xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
         break;
 
-    case T10:
-        buffer[1] |= (T10 << 5);
+    case TSB10:
+        buffer[1] |= (TSB10 << 5);
         xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
         break;
 
-    case T20:
-        buffer[1] |= (T20 << 5);
+    case TSB20:
+        buffer[1] |= (TSB20 << 5);
         xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
         break;
 
@@ -249,7 +247,17 @@ bool bmp280_is_measuring(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handle)
     return measuring;
 }
 
-void bmp280_get_temperature(bmp280_t *bmp280, int32_t adc_T)
+void bmp280_get_adc_T_P(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handle)
+{
+    reset_buffer();
+
+    buffer[0] = BMP280_TEMP_MSB;
+    i2c_master_transmit_receive(dev_handle, &buffer[0], 1, &buffer[0], 3, bmp280->Timeout);
+
+    bmp280->adc_T = ((uint32_t)buffer[0] << 12) | ((uint32_t)buffer[1] << 4) | ((uint32_t)buffer[1] >> 4);
+}
+
+void bmp280_get_compesate_temperature(bmp280_t *bmp280, int32_t adc_T, int32_t *fine_temp)
 {
     int32_t var1 = 0, var2 = 0;
     int32_t dig_T1 = bmp280->T1;
@@ -260,9 +268,7 @@ void bmp280_get_temperature(bmp280_t *bmp280, int32_t adc_T)
 
     var2 = (((((adc_T >> 4) - (dig_T1)) * ((adc_T >> 4) - (dig_T1))) >> 12) * (dig_T3)) >> 14;
 
-    int32_t fine_temp = var1 + var2;
+    *fine_temp = var1 + var2;
 
-    ESP_LOGW(TAG, "var1: %ld | var2: %ld", var1, var2);
-
-    bmp280->Temperature = (fine_temp * 5 + 128) >> 8;
+    bmp280->Temperature = (*fine_temp * 5 + 128) >> 8;
 }

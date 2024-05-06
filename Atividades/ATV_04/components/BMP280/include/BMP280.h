@@ -14,7 +14,7 @@
 //  @brief Endereco do bmp280
 //
 //  @note Quando SD0 estiver em 0 (Low)
-#define bmp280_ADDRESS_0  0x76 
+#define BMP280_ADDRESS_0  0x76 
 
 //  @brief Endereco do BMP280
 //
@@ -96,14 +96,14 @@ enum MODE
 
 enum STANDBY
 {
-    T0_5 = 0b000,
-    T62_5 = 0b001,
-    T125 = 0b010,
-    T250 = 0b011,
-    T500 = 0b100,
-    T1000 = 0b101,
-    T10 = 0b110,
-    T20 = 0b111
+    TSB0_5 = 0b000,
+    TSB62_5 = 0b001,
+    TSB125 = 0b010,
+    TSB250 = 0b011,
+    TSB500 = 0b100,
+    TSB1000 = 0b101,
+    TSB10 = 0b110,
+    TSB20 = 0b111
 };
 
 enum OVERSAMPLING
@@ -123,6 +123,7 @@ typedef struct
     int16_t T2;
     int16_t T3;
 
+    int32_t adc_T;
     int32_t Temperature;
     
     //Trimming Params Pressao
@@ -136,6 +137,7 @@ typedef struct
     int16_t P8;
     int16_t P9;
 
+    int32_t adc_P;
     uint32_t Pressure;
 
     //Variavel para espera de mensagem
@@ -167,7 +169,7 @@ void bmp280_get_trimming_params_temp(bmp280_t *bmp280, i2c_master_dev_handle_t d
 //  @return ESP_XX Retorna Algo do tipo ESP_OK, ESP_FAIL, ...
 esp_err_t bmp280_set_mode(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handle, uint8_t mode);
 
-//  @brief Seleciona o Modo do Sensor
+//  @brief Configura o tempo de espera entre as conversoes
 //
 //  @param *bmp280 Endereco da estrutura bmp280_t
 //  @param dev_handle copia do i2c_master_dev_handle_t
@@ -176,18 +178,17 @@ esp_err_t bmp280_set_mode(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handle, 
 //  @return ESP_XX Retorna Algo do tipo ESP_OK, ESP_FAIL, ...
 esp_err_t bmp280_set_standby(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handle, uint8_t standby);
 
-//  @brief Seleciona o Modo do Sensor
+//  @brief Seleciona o Oversamplig dos dados
 //
 //  @param *bmp280 Endereco da estrutura bmp280_t
 //  @param dev_handle copia do i2c_master_dev_handle_t
 //  @param osrs_p oversamplig da pressao
 //  @param osrs_t oversamplig da temperatura
-//  @param osrs_h oversamplig da umidade
 //
 //  @return ESP_XX Retorna Algo do tipo ESP_OK, ESP_FAIL, ...
 esp_err_t bmp280_set_oversamplig(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handle, uint8_t osrs_p, uint8_t osrs_t);
 
-//  @brief Seleciona o Modo do Sensor
+//  @brief Verifica se esta realizando algum conversao
 //
 //  @param *bmp280 Endereco da estrutura bmp280_t
 //  @param dev_handle copia do i2c_master_dev_handle_t
@@ -196,11 +197,20 @@ esp_err_t bmp280_set_oversamplig(bmp280_t *bmp280, i2c_master_dev_handle_t dev_h
 //  @return 0x0 Caso o resultado ja foi transferido para os registradores
 bool bmp280_is_measuring(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handle);
 
+//  @brief Grava os valores do ADC do sensor na estrutura
+//
+//  @param *bmp280 Endereco da estrutura bmp280_t
+//  @param dev_handle copia do i2c_master_dev_handle_t
+//
+//  @return 0x1 Caso esteja convertendo
+//  @return 0x0 Caso o resultado ja foi transferido para os registradores
+void bmp280_get_adc_T_P(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handle);
+
 //  @brief faz a leitura da temperatura
 //
 //  @param *bmp280 Endereco da estrutura bmp280_t
 //  @param adc_T Leitura dos registradores de Temperatura do bmp280 (0xFA...0xFC)
 //  @param *fine_temp Valor global da temperatura
-void bmp280_get_temperature(bmp280_t *bmp280, int32_t adc_T);
+void bmp280_get_compesate_temperature(bmp280_t *bmp280, int32_t adc_T, int32_t *fine_temp);
 
 #endif
