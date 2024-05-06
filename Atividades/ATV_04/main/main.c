@@ -132,15 +132,9 @@ void vTaskBME(void *pvParameter)
 
     bmp280_set_standby(&bmp280, dev_handle, 0b101);
     bmp280_set_oversamplig(&bmp280, dev_handle, SKIP, x1);
-    
-    buffer[0] = BMP280_CTRL_MEAS;
-
-    i2c_master_transmit_receive(dev_handle, &buffer[0], 1, &buffer[1], 1, 100);
-    ESP_LOGW(TAG_BME, "%X : %X", buffer[0], buffer[1]);
-    // bmp280_set_mode(&bmp280, dev_handle, bmp280_MODE_NORMAL);
+    bmp280_set_mode(&bmp280, dev_handle, NORMAL);
 
     vTaskDelay(pdMS_TO_TICKS(50));
-
 
     bmp280_get_trimming_params_temp(&bmp280, dev_handle);
 
@@ -148,15 +142,15 @@ void vTaskBME(void *pvParameter)
     {
         vTaskDelay(pdMS_TO_TICKS(2000));
 
-        // if (!(bmp280_is_measuring(&bmp280, dev_handle)))
-        // {
-        //     xError = i2c_master_transmit_receive(dev_handle, &adc_T_regs[0], 2, &buffer[0], 2, bmp280.Timeout);
-        //     ESP_LOGW(TAG_BME, "%s", esp_err_to_name(xError));
+        if (!(bmp280_is_measuring(&bmp280, dev_handle)))
+        {
+            xError = i2c_master_transmit_receive(dev_handle, &adc_T_regs[0], 2, &buffer[0], 2, bmp280.Timeout);
+            // ESP_LOGW(TAG_BME, "%s", esp_err_to_name(xError));
 
-        //     adc_T = ((uint32_t)buffer[0]) | ((uint32_t)buffer[1]);
+            adc_T = ((uint32_t)buffer[0] << 8) | ((uint32_t)buffer[1]);
 
-        //     bmp280_get_temperature(&bmp280, adc_T);
-        //     ESP_LOGI(TAG_BME, "Temperatura: %li", bmp280.Temperature);
-        // }
+            bmp280_get_temperature(&bmp280, adc_T);
+            ESP_LOGI(TAG_BME, "Temperatura: %li", bmp280.Temperature);
+        }
     }
 }

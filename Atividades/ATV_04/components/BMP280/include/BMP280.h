@@ -33,13 +33,6 @@
 //  no effect. The readout value is always 0x00.
 #define BMP280_RESET 0xE0
 
-//  @brief The “ctrl_hum” register sets
-//  the humidity data acquisition options of the device. 
-//
-//  @note Changes to this register only become effective
-//  after a write operation to “ctrl_meas”.
-#define BMP280_CTRL_HUM 0xF2
-
 //  @brief The “status” register contains 
 //  two bits which indicate the status of the device.
 #define BMP280_STATUS 0XF3
@@ -87,16 +80,6 @@
 //
 //  @param  BMP280_TEMP_XLSB temp_xlsb[3:0]
 #define BMP280_TEMP_XLSB 0xFC
-
-//  @brief The “temp” register contains the raw temperature measurement output data ut[19:0]
-//
-//  @param BMP280_HUM_MSB hum_msb[7:0]
-#define BMP280_HUM_MSB 0xFD
-
-//  @brief The “temp” register contains the raw temperature measurement output data ut[19:0]
-//
-//  @param BMP280_HUM_LSB hum_lsb[7:0]
-#define BMP280_HUM_LSB 0xFE
 
 #define BMP280_MODE_SLEEP 0x0
 #define BMP280_MODE_FORCED_1 0x1
@@ -157,12 +140,6 @@ typedef struct
 
     //Variavel para espera de mensagem
     int Timeout;
-
-    //Id do sensor
-    uint8_t device_id;
-
-    //Mode
-    uint8_t mode;
 
 } bmp280_t;
 

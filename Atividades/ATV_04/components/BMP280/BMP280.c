@@ -27,24 +27,24 @@ void bmp280_get_trimming_params_temp(bmp280_t *bmp280, i2c_master_dev_handle_t d
     i2c_master_transmit_receive(dev_handle, &AddrTrimming[0], 2,
                                 &buffer[0], 2, bmp280->Timeout);
 
-    bmp280->T1 = ((uint16_t)buffer[1] << 8) | buffer[0];
-    ESP_LOGI(TAG, "Param T1: %u", bmp280->T1);
+    bmp280->T1 = (uint16_t)(((uint16_t)buffer[1] << 8) | buffer[0]);
+    ESP_LOGI(TAG, "Param T1 (%x | %x): %u", AddrTrimming[0], AddrTrimming[1],bmp280->T1);
 
     AddrTrimming[0] += 0x02;
     AddrTrimming[1] += 0x02;
     i2c_master_transmit_receive(dev_handle, &AddrTrimming[0], 2,
-                                &buffer, 2, bmp280->Timeout);
+                                &buffer[0], 2, bmp280->Timeout);
 
-    bmp280->T2 = ((int16_t)buffer[1] << 8) | buffer[0];
-    ESP_LOGI(TAG, "Param T2: %i", bmp280->T2);
+    bmp280->T2 = (int16_t)(((int16_t)buffer[1] << 8) | buffer[0]);
+    ESP_LOGI(TAG, "Param T1 (%x | %x): %u", AddrTrimming[0], AddrTrimming[1],bmp280->T2);
 
     AddrTrimming[0] += 0x02;
     AddrTrimming[1] += 0x02;
     i2c_master_transmit_receive(dev_handle, &AddrTrimming[0], 2,
-                                &buffer, 2, bmp280->Timeout);
+                                &buffer[0], 2, bmp280->Timeout);
 
-    bmp280->T3 = ((int16_t)buffer[1] << 8) | buffer[0];
-    ESP_LOGI(TAG, "Param T3: %i", bmp280->T3);
+    bmp280->T3 = (int16_t)(((int16_t)buffer[1] << 8) | buffer[0]);
+    ESP_LOGI(TAG, "Param T1 (%x | %x): %u", AddrTrimming[0], AddrTrimming[1],bmp280->T3);
 }
 
 esp_err_t bmp280_set_mode(bmp280_t *bmp280, i2c_master_dev_handle_t dev_handle, uint8_t mode)
@@ -179,52 +179,58 @@ esp_err_t bmp280_set_oversamplig(bmp280_t *bmp280, i2c_master_dev_handle_t dev_h
             break;
         }
 
-        ESP_LOGI(TAG, "(%d) %X : %X", idx, buffer[0], buffer[1]);
-
-        i2c_master_transmit_receive(dev_handle, &buffer[0], 1, &buffer[1], 1, 100);
+        i2c_master_transmit(dev_handle, &buffer[0], 1, 100);
 
         buffer[1] &= ~(0x03 << deslocamento);
-        ESP_LOGI(TAG, "(%d) %X : %X", idx, buffer[0], buffer[1]);
 
         switch (aux_temp[idx])
         {
         case SKIP:
             buffer[1] |= (SKIP << deslocamento);
-            xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
+            xError = i2c_master_transmit(dev_handle, &buffer[0], 1, bmp280->Timeout);
+            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
 
         case x1:
             buffer[1] |= (x1 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
+            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
 
         case x2:
             buffer[1] |= (x2 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
+            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
 
         case x4:
             buffer[1] |= (x4 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
+            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
 
         case x8:
             buffer[1] |= (x8 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
+            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
 
         case x16:
             buffer[1] |= (x16 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
+            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
 
         default:
             ESP_LOGW(TAG, "Oversamplig Colocado em x16");
             buffer[1] |= (x16 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
+            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
         }
-        ESP_LOGI(TAG, "(%d) %X : %X\n\n", idx, buffer[0], buffer[1]);
+
+        i2c_master_transmit_receive(dev_handle, &buffer[0], 1, &buffer[1], 1, 100);
+
     }
 
     return xError;
@@ -251,11 +257,12 @@ void bmp280_get_temperature(bmp280_t *bmp280, int32_t adc_T)
     int32_t dig_T3 = bmp280->T3;
 
     var1 = ((((adc_T >> 3) - (dig_T1 << 1))) * (dig_T2)) >> 11;
-    ;
 
     var2 = (((((adc_T >> 4) - (dig_T1)) * ((adc_T >> 4) - (dig_T1))) >> 12) * (dig_T3)) >> 14;
 
     int32_t fine_temp = var1 + var2;
+
+    ESP_LOGW(TAG, "var1: %ld | var2: %ld", var1, var2);
 
     bmp280->Temperature = (fine_temp * 5 + 128) >> 8;
 }
