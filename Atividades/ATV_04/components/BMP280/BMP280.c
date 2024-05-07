@@ -192,50 +192,42 @@ esp_err_t bmp280_set_oversamplig(bmp280_t *bmp280, i2c_master_dev_handle_t dev_h
         {
         case SKIP:
             buffer[1] |= (SKIP << deslocamento);
-            xError = i2c_master_transmit(dev_handle, &buffer[0], 1, bmp280->Timeout);
-            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
+            xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
             break;
 
         case x1:
             buffer[1] |= (x1 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
-            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
 
         case x2:
             buffer[1] |= (x2 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
-            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
 
         case x4:
             buffer[1] |= (x4 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
-            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
 
         case x8:
             buffer[1] |= (x8 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
-            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
 
         case x16:
             buffer[1] |= (x16 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
-            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
 
         default:
             ESP_LOGW(TAG, "Oversamplig Colocado em x16");
             buffer[1] |= (x16 << deslocamento);
             xError = i2c_master_transmit(dev_handle, &buffer[0], 2, bmp280->Timeout);
-            xError = i2c_master_transmit(dev_handle, &buffer[1], 1, bmp280->Timeout);
             break;
         }
 
         i2c_master_transmit_receive(dev_handle, &buffer[0], 1, &buffer[1], 1, 100);
-
     }
 
     return xError;
