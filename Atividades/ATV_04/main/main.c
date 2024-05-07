@@ -14,8 +14,8 @@
 
 #include <BMP280.h>
 
-#define TXD1_PIN 26
-#define RXD1_PIN 25
+#define TXD1_PIN 1
+#define RXD1_PIN 3
 #define RX_BUFFER_SIZE 256
 
 #define I2C_MASTER_SCL_IO 19
@@ -100,15 +100,16 @@ void app_main(void)
 void vTaskUART_TX(void *pvParameter)
 {
     int txBytes = -1;
-    char buffer[5];
+    char buffer[6];
 
     while (1)
     {
         if (xSemaphoreTake(xSemaphoreBinario, portMAX_DELAY) == pdTRUE)
         {
-            snprintf(buffer, 5, "%ld", Temperatura);
+            snprintf(buffer, 5, "%ld\n", Temperatura);
             txBytes = uart_write_bytes(UART_NUM_1, buffer, sizeof(buffer));
-            ESP_LOGI(TAG_UART, "Tx bytes: %i | MSG: %s", txBytes, &buffer[0]);
+            
+            // ESP_LOGI(TAG_UART, "Tx bytes: %i | MSG: %s", txBytes, &buffer[0]);
         }
 
         vTaskDelay(1000 / portTICK_PERIOD_MS);
@@ -152,6 +153,7 @@ void vTaskBMP(void *pvParameter)
 
             Temperatura = bmp280.Temperature;
 
+            //mudar para fila para enviar a var.
             xSemaphoreGive(xSemaphoreBinario);
         }
     }
