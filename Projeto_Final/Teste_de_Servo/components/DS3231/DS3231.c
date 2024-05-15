@@ -17,4 +17,7 @@ void vDS3231_get_clock(i2c_master_dev_handle_t ds3231_handle, ds3231_t *ds3231)
     ucWriteBuffer = SECONDS;
     i2c_master_transmit_receive(ds3231_handle, &ucWriteBuffer, 1,
                                 &(ds3231->sec), 3, ds3231->Timeout);
+    // Como as variaveis sao do mesmo tamanho (uint8_t) passando o endereco
+    //inicial, a funcao ira gravar os dados nos enderecos seguintes, pois eles
+    //sao subsequentes
 }
