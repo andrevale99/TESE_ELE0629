@@ -3,7 +3,7 @@
 
 # Atividade 05
 
-Atividade para colcar em prática os conceitos sobre Wi-Fi, HTTP e MQTT visto em sala de aula.
+Atividade para colocar em prática os conceitos sobre Wi-Fi, HTTP e MQTT visto em sala de aula.
 
 Atividade básica, basta que vocês realizem uma conexão segura HTTP ou MQTT, utilizando o servidor ou o broker que vocês escolherem. Lendo e escrevendo em um banco de dados no caso do HTTP e publicando e se inscrevendo em tópicos no caso do MQTT.
 
