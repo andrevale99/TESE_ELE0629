@@ -21,9 +21,9 @@
 #include "Wifi.h"
 
 // Credenciais do Wi-Fi definidas no menuconfig
-#define EXAMPLE_ESP_WIFI_SSID       CONFIG_ESP_WIFI_SSID
-#define EXAMPLE_ESP_WIFI_PASSWORD   CONFIG_ESP_WIFI_PASSWORD
-#define EXAMPLE_ESP_MAXIMUM_RETRY   CONFIG_ESP_MAXIMUM_RETRY
+#define EXAMPLE_ESP_WIFI_SSID       "brisa-2532295"
+#define EXAMPLE_ESP_WIFI_PASSWORD   "zlgy1ssc"
+#define EXAMPLE_ESP_MAXIMUM_RETRY   5
 
 // Definição dos bits para o grupo de eventos (BIT0 e BIT1 já são macros, não precisamos realizar deslocamento de bits)
 #define WIFI_CONNECTED_BIT  BIT0
