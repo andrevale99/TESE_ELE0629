@@ -11,6 +11,8 @@
 #include "nvs_flash.h"
 
 #include "DS3231.h"
+#include "Wifi.h"
+#include "clock_mqtt.h"
 
 void app_main(void)
 {
@@ -22,4 +24,8 @@ void app_main(void)
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
+
+    wifi_init_sta();
+
+    clockMQTT_config();
 }

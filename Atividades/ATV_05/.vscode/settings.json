@@ -1,4 +1,10 @@
 {
   "C_Cpp.intelliSenseEngine": "default",
-  "idf.adapterTargetName": "esp32"
+  "idf.adapterTargetName": "esp32",
+  "idf.port": "/dev/ttyUSB0",
+  "files.associations": {
+    "freertos.h": "c",
+    "clock_mqtt.h": "c"
+  },
+  "idf.flashType": "UART"
 }
