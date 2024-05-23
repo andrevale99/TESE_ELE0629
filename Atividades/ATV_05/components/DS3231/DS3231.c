@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "DS3231.h"
 
-const char *TAG = "[DS3231_H]";
+const char *TAG_DS32321_H = "[DS3231_H]";
 
 uint8_t ucWriteBuffer = 0;
 

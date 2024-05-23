@@ -4,7 +4,9 @@
   "idf.port": "/dev/ttyUSB0",
   "files.associations": {
     "freertos.h": "c",
-    "clock_mqtt.h": "c"
+    "clock_mqtt.h": "c",
+    "wifi.h": "c",
+    "mqtt_andre.h": "c"
   },
   "idf.flashType": "UART"
 }
