@@ -7,7 +7,8 @@
 
 #include <esp_log.h>
 
-#include <DS3231.h>
+#include "ds3231.h"
+#include "servo_teste.h"
 
 #define I2C_MASTER_SCL_IO 23
 #define I2C_MASTER_SDA_IO 22
@@ -39,10 +40,10 @@ void app_main(void)
 
     xTaskCreate(vTask_DS3231, "Task_DS3231", configMINIMAL_STACK_SIZE + 1024, NULL, 0, &xTaskDS3231_handle);
 
-    while (true)
-    {
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
+    // while (true)
+    // {
+        // vTaskDelay(pdMS_TO_TICKS(10));
+    // }
 }
 
 //=====================================================

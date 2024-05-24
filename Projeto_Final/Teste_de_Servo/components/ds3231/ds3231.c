@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include "DS3231.h"
+#include "ds3231.h"
 
 const char *TAG = "[DS3231_H]";
 
