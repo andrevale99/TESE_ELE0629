@@ -6,9 +6,12 @@
 #include <driver/mcpwm_prelude.h>
 
 #include <esp_log.h>
+#include <esp_err.h>
+
+#include <nvs_flash.h>
 
 #include "MQTT_lib.h"
-#include "hd44780.h"
+#include "WiFi.h"
 
 #define I2C_MASTER_SCL_IO 23
 #define I2C_MASTER_SDA_IO 22
@@ -36,6 +39,10 @@ void vTaskADC(void *pvParameters);
 TaskHandle_t xTaskADC_handle = NULL;
 const char *TAG_ADC = "[ADC]";
 
+void vTaskMQTT(void *pvParameters);
+TaskHandle_t xTaskMQTT_handle = NULL;
+const char *TAG_MQTT = "[MQTT]";
+
 void ADC_config(void);
 adc_oneshot_unit_handle_t xADC1_handle = NULL;
 
@@ -44,6 +51,10 @@ mcpwm_timer_handle_t timer = NULL;
 mcpwm_oper_handle_t oper = NULL;
 mcpwm_cmpr_handle_t comparator = NULL;
 mcpwm_gen_handle_t generator = NULL;
+
+void MQTT_config(void);
+const char *topic_LastWill = "UFRN/LiuKang/Status";
+const char *uri = "mqtt://mqtt.eclipseprojects.io";
 
 static inline uint32_t example_angle_to_compare(int angle)
 {
@@ -61,6 +72,7 @@ void app_main(void)
     MCPWM_config();
 
     xTaskCreate(vTaskLCD, "LCD task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskLCD_handle);
+    xTaskCreate(vTaskMQTT, "MQTT task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskMQTT_handle);
     xTaskCreate(vTaskADC, "ADC1 task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskADC_handle);
 
     // int angle = 0;
@@ -85,26 +97,8 @@ void app_main(void)
 
 void vTaskLCD(void *pvParameters)
 {
-    hd44780_t lcd = {
-        .write_cb = NULL,
-        .font = HD44780_FONT_5X8,
-        .lines = 2,
-
-        .pins = {
-            .rs = GPIO_NUM_19,
-            .e = GPIO_NUM_18,
-            .d4 = GPIO_NUM_5,
-            .d5 = GPIO_NUM_17,
-            .d6 = GPIO_NUM_16,
-            .d7 = GPIO_NUM_4,
-            .bl = HD44780_NOT_USED}};
-
-    ESP_ERROR_CHECK(hd44780_init(&lcd));
-
     while (1)
     {
-        hd44780_gotoxy(&lcd, 0, 0);
-        hd44780_puts(&lcd, "Hello LCD!");
 
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -124,6 +118,18 @@ void vTaskADC(void *pvParameters)
     }
 
     vTaskDelete(xTaskADC_handle);
+}
+
+void vTaskMQTT(void *pvParameters)
+{
+    mqtt_subscribe("UFRN/LiuKang/Teste", 0);
+
+    while (1)
+    {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    vTaskDelete(xTaskMQTT_handle);
 }
 
 void ADC_config(void)
@@ -192,4 +198,20 @@ void MCPWM_config(void)
     ESP_LOGI(TAG, "Enable and start timer");
     ESP_ERROR_CHECK(mcpwm_timer_enable(timer));
     ESP_ERROR_CHECK(mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP));
+}
+
+void MQTT_config(void)
+{
+    // Inicializando NVS
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
+
+    //  INICIAR O WIFI ANTES
+
+    mqtt_start(uri, topic_LastWill); // Iniciando conexão MQTT. Função da Lib criada, MQTT.h
 }

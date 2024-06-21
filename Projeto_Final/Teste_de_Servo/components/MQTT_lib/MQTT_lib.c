@@ -52,17 +52,17 @@ static void mqtt_event_handler(void *event_handler_arg, esp_event_base_t event_b
     }    
 }
 
-void mqtt_start(void){
+void mqtt_start(const char *uri,const char *topic_LastWill){
 
     status_mqtt_event_group = xEventGroupCreate();
     //Configuração da estrutura do cliente MQTT
     esp_mqtt_client_config_t esp_mqtt_client_cfg = {
         .network.disable_auto_reconnect = false,                    // Habilitar reconexão 
-        .broker.address.uri = "mqtt://mqtt.eclipseprojects.io",
+        .broker.address.uri = uri,
         .broker.address.port = 1883,
         .session.keepalive = 10,                                    // Padrão é 120 segundos
         .session.last_will = {
-            .topic = "UFRN/Lab/status",
+            .topic = topic_LastWill,
             .msg = "Offline",
             .msg_len = strlen("Offline"),
             .retain = 0
