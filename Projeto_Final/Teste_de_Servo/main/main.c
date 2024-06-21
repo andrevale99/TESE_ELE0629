@@ -1,13 +1,13 @@
-#include <stdio.h>
-
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
-#include <driver/i2c_master.h>
+#include <esp_adc/adc_oneshot.h>
+#include <hal/adc_types.h>
+#include <driver/mcpwm_prelude.h>
 
 #include <esp_log.h>
 
-#include <driver/mcpwm_prelude.h>
+#include "MQTT_lib.h"
 
 #define I2C_MASTER_SCL_IO 23
 #define I2C_MASTER_SDA_IO 22
@@ -27,13 +27,22 @@
 //  PROTOTIPOS E VARS
 //=====================================================
 
+void vTaskLCD(void *pvParameters);
+TaskHandle_t xTaskLCD_handle = NULL;
+const char *TAG_LCD = "[LCD]";
+
+void vTaskADC(void *pvParameters);
+TaskHandle_t xTaskADC_handle = NULL;
+const char *TAG_ADC = "[ADC]";
+
+void ADC_config(void);
+adc_oneshot_unit_handle_t xADC1_handle = NULL;
+
 void MCPWM_config(void);
 mcpwm_timer_handle_t timer = NULL;
 mcpwm_oper_handle_t oper = NULL;
 mcpwm_cmpr_handle_t comparator = NULL;
 mcpwm_gen_handle_t generator = NULL;
-
-
 
 static inline uint32_t example_angle_to_compare(int angle)
 {
@@ -47,27 +56,70 @@ void app_main(void)
 {
     const char *TAG = "[APP_MAIN]";
 
+    ADC_config();
     MCPWM_config();
 
-    int angle = 0;
-    int step = 2;
-    while (true)
-    {
-        ESP_LOGI(TAG, "Angle of rotation: %d", angle);
-        ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(angle)));
-        // Add delay, since it takes time for servo to rotate, usually 200ms/60degree rotation under 5V power supply
-        vTaskDelay(pdMS_TO_TICKS(500));
-        if ((angle + step) > 60 || (angle + step) < -60)
-        {
-            step *= -1;
-        }
-        angle += step;
-    }
+    xTaskCreate(vTaskLCD, "LCD task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskLCD_handle);
+    xTaskCreate(vTaskADC, "ADC1 task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskADC_handle);
+
+    // int angle = 0;
+    // int step = 2;
+    // while (true)
+    // {
+    //     ESP_LOGI(TAG, "Angle of rotation: %d", angle);
+    //     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(angle)));
+    //     // Add delay, since it takes time for servo to rotate, usually 200ms/60degree rotation under 5V power supply
+    //     vTaskDelay(pdMS_TO_TICKS(500));
+    //     if ((angle + step) > 60 || (angle + step) < -60)
+    //     {
+    //         step *= -1;
+    //     }
+    //     angle += step;
+    // }
 }
 
 //=====================================================
 //  FUNCOES
 //=====================================================
+
+void vTaskLCD(void *pvParameters)
+{
+    while (1)
+    {
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    vTaskDelete(xTaskLCD_handle);
+}
+
+void vTaskADC(void *pvParameters)
+{
+    int adc_raw = 0;
+    while(1)
+    {   
+        adc_oneshot_read(xADC1_handle, ADC_CHANNEL_0, &adc_raw);
+        ESP_LOGI(TAG_ADC, "%d", adc_raw);
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    vTaskDelete(xTaskADC_handle);
+}
+
+void ADC_config(void)
+{
+    adc_oneshot_unit_init_cfg_t ADC1_config =
+        {
+            .unit_id = ADC_UNIT_1};
+    ESP_ERROR_CHECK(adc_oneshot_new_unit(&ADC1_config, &xADC1_handle));
+
+    adc_oneshot_chan_cfg_t config = {
+        .bitwidth = ADC_BITWIDTH_12,
+        .atten = ADC_ATTEN_DB_12,
+    };
+
+    ESP_ERROR_CHECK(adc_oneshot_config_channel(xADC1_handle, ADC_CHANNEL_0, &config));
+}
 
 void MCPWM_config(void)
 {
