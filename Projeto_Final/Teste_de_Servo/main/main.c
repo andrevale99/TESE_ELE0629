@@ -8,6 +8,7 @@
 #include <esp_log.h>
 
 #include "MQTT_lib.h"
+#include "hd44780.h"
 
 #define I2C_MASTER_SCL_IO 23
 #define I2C_MASTER_SDA_IO 22
@@ -84,8 +85,27 @@ void app_main(void)
 
 void vTaskLCD(void *pvParameters)
 {
+    hd44780_t lcd = {
+        .write_cb = NULL,
+        .font = HD44780_FONT_5X8,
+        .lines = 2,
+
+        .pins = {
+            .rs = GPIO_NUM_19,
+            .e = GPIO_NUM_18,
+            .d4 = GPIO_NUM_5,
+            .d5 = GPIO_NUM_17,
+            .d6 = GPIO_NUM_16,
+            .d7 = GPIO_NUM_4,
+            .bl = HD44780_NOT_USED}};
+
+    ESP_ERROR_CHECK(hd44780_init(&lcd));
+
     while (1)
     {
+        hd44780_gotoxy(&lcd, 0, 0);
+        hd44780_puts(&lcd, "Hello LCD!");
+
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
@@ -95,8 +115,8 @@ void vTaskLCD(void *pvParameters)
 void vTaskADC(void *pvParameters)
 {
     int adc_raw = 0;
-    while(1)
-    {   
+    while (1)
+    {
         adc_oneshot_read(xADC1_handle, ADC_CHANNEL_0, &adc_raw);
         ESP_LOGI(TAG_ADC, "%d", adc_raw);
 
