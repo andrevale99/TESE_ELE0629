@@ -70,10 +70,11 @@ void app_main(void)
 
     ADC_config();
     MCPWM_config();
+    MQTT_config();
 
     xTaskCreate(vTaskLCD, "LCD task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskLCD_handle);
-    xTaskCreate(vTaskMQTT, "MQTT task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskMQTT_handle);
     xTaskCreate(vTaskADC, "ADC1 task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskADC_handle);
+    xTaskCreate(vTaskMQTT, "MQTT task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskMQTT_handle);
 
     // int angle = 0;
     // int step = 2;
@@ -211,7 +212,7 @@ void MQTT_config(void)
     }
     ESP_ERROR_CHECK(ret);
 
-    //  INICIAR O WIFI ANTES
+    wifi_init_sta();
 
     mqtt_start(uri, topic_LastWill); // Iniciando conexão MQTT. Função da Lib criada, MQTT.h
 }

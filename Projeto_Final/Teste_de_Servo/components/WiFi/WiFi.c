@@ -21,9 +21,9 @@
 #include "WiFi.h"
 
 // Credenciais do Wi-Fi definidas no menuconfig
-#define EXAMPLE_ESP_WIFI_SSID       CONFIG_ESP_WIFI_SSID
-#define EXAMPLE_ESP_WIFI_PASSWORD   CONFIG_ESP_WIFI_PASSWORD
-#define EXAMPLE_ESP_MAXIMUM_RETRY   CONFIG_ESP_MAXIMUM_RETRY
+#define ESP_WIFI_SSID       CONFIG_ESP_WIFI_SSID //CONFIG_ESP_WIFI_SSID
+#define ESP_WIFI_PASSWORD   CONFIG_ESP_WIFI_PASSWORD //CONFIG_ESP_WIFI_PASSWORD
+#define ESP_MAXIMUM_RETRY   CONFIG_ESP_MAXIMUM_RETRY       //CONFIG_ESP_MAXIMUM_RETRY
 
 // Definição dos bits para o grupo de eventos (BIT0 e BIT1 já são macros, não precisamos realizar deslocamento de bits)
 #define WIFI_CONNECTED_BIT  BIT0
@@ -193,7 +193,7 @@ static void event_handler(void *arg, esp_event_base_t event_base, int32_t event_
 //            wifi_event_sta_disconnected->reason == WIFI_REASON_AUTH_EXPIRE){
 
                 // Tentando reconectar
-                if(s_retry_num < EXAMPLE_ESP_MAXIMUM_RETRY){
+                if(s_retry_num < ESP_MAXIMUM_RETRY){
                     esp_wifi_connect();
                     s_retry_num++;
                     ESP_LOGI(TAG, "Tentando se conectar %d", s_retry_num);
@@ -259,8 +259,8 @@ void wifi_init_sta(void){
     // Configuração da estrutura do WiFi modo sta com as credenciais e autenticações
     wifi_config_t wifi_config = {
         .sta ={
-            .ssid = EXAMPLE_ESP_WIFI_SSID,
-            .password = EXAMPLE_ESP_WIFI_PASSWORD,
+            .ssid = ESP_WIFI_SSID,
+            .password = ESP_WIFI_PASSWORD,
             .threshold.authmode = WIFI_AUTH_WPA2_PSK,
             .pmf_cfg ={
                 .capable = true,
@@ -282,10 +282,10 @@ void wifi_init_sta(void){
     EventBits_t bits = xEventGroupWaitBits(s_wifi_event_group, WIFI_CONNECTED_BIT | WIFI_FAIL_BIT, pdFALSE, pdFALSE, portMAX_DELAY);
 
     if(bits & WIFI_CONNECTED_BIT){
-        ESP_LOGI(TAG, "CONECTADO A SSID: %s password: %s", EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASSWORD);
+        ESP_LOGI(TAG, "CONECTADO A SSID: %s password: %s", ESP_WIFI_SSID, ESP_WIFI_PASSWORD);
 
     }else if(bits & WIFI_FAIL_BIT){
-        ESP_LOGI(TAG, "FALHA AO SE CONECTAR A SSID: %s password: %s", EXAMPLE_ESP_WIFI_SSID, EXAMPLE_ESP_WIFI_PASSWORD);
+        ESP_LOGI(TAG, "FALHA AO SE CONECTAR A SSID: %s password: %s", ESP_WIFI_SSID, ESP_WIFI_PASSWORD);
 
     }else {
         ESP_LOGI(TAG, "EVENTO INESPERADO!!!");
