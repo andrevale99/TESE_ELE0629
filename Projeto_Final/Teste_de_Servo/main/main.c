@@ -7,6 +7,7 @@
 #include <driver/mcpwm_prelude.h>
 #include <driver/gpio.h>
 #include <driver/i2c_master.h>
+#include <driver/uart.h>
 
 #include <esp_log.h>
 #include <esp_err.h>
@@ -20,6 +21,11 @@
 #define I2C_MASTER_SCL_IO 23
 #define I2C_MASTER_SDA_IO 22
 #define I2C_MASTER_FREQ_HZ 100000
+
+#define TXD1_PIN 1
+#define RXD1_PIN 3
+#define RX_BUFFER_SIZE 256
+#define MAX_BUFFER_SIZE 256
 
 // Please consult the datasheet of your servo before changing the following parameters
 #define SERVO_MIN_PULSEWIDTH_US 500  // Minimum pulse width in microsecond
@@ -47,9 +53,10 @@ const char *TAG_ROTINA = "[ROTINA]";
 static int adc_raw = 0;
 ds3231_t relogio;
 
-static void vTaskSD(void *pvParameters);
-TaskHandle_t xTaskSD_handle = NULL;
-const char *TAG_SD = "[SD]";
+static void vTaskUART(void *pvParameters);
+TaskHandle_t xTaskUART_handle = NULL;
+const char *TAG_UART = "[UART]";
+char buffer[MAX_BUFFER_SIZE];
 SemaphoreHandle_t xSemaphore_handle = NULL;
 
 static void vTaskMQTT(void *pvParameters);
@@ -70,7 +77,7 @@ i2c_master_bus_handle_t xI2CMaster_handle = NULL;
 
 static esp_err_t I2C_config(void);
 
-static esp_err_t SPI_config(void);
+static esp_err_t UART_config(void);
 
 static esp_err_t MQTT_config(void);
 const char *topic_LastWill = "UFRN/LiuKang/Status";
@@ -89,16 +96,17 @@ void app_main(void)
 
     xSemaphore_handle = xSemaphoreCreateBinary();
 
-    ESP_LOGW(TAG, "GPIO_config(): %s", esp_err_to_name(GPIO_config()));
-    ESP_LOGW(TAG, "ADC_config(): %s", esp_err_to_name(ADC_config()));
-    ESP_LOGW(TAG, "MCPWM_config(): %s", esp_err_to_name(MCPWM_config()));
-    ESP_LOGW(TAG, "MQTT_config(): %s", esp_err_to_name(MQTT_config()));
-    ESP_LOGW(TAG, "I2C_config(): %s", esp_err_to_name(I2C_config()));
+    GPIO_config();
+    ADC_config();
+    MCPWM_config();
+    MQTT_config();
+    I2C_config();
+    UART_config();
 
     xTaskCreate(vTaskLCD, "LCD task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskLCD_handle);
     xTaskCreate(vTaskMQTT, "MQTT task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskMQTT_handle);
     xTaskCreate(vTaskRotina, "Rotina task", configMINIMAL_STACK_SIZE + 1024, NULL, 3, &xTaskRotina_handle);
-    xTaskCreate(vTaskSD, "SD task", configMINIMAL_STACK_SIZE + 1024, NULL, 2, &xTaskSD_handle);
+    xTaskCreate(vTaskUART, "UART task", configMINIMAL_STACK_SIZE + 1024, NULL, 2, &xTaskUART_handle);
 
     // int angle = 0;
     // int step = 2;
@@ -132,8 +140,6 @@ static void vTaskLCD(void *pvParameters)
 
 static void vTaskRotina(void *pvParameters)
 {
-    char hora[10];
-
     relogio.Timeout = 500;
 
     while (1)
@@ -141,31 +147,34 @@ static void vTaskRotina(void *pvParameters)
         ds3231_get_clock(relogio.dev_handle, &relogio);
         adc_oneshot_read(xADC1_handle, ADC_CHANNEL_0, &adc_raw);
 
-        snprintf(&hora[0], 10, "%x:%x:%x", relogio.hour, relogio.min, relogio.sec);
-
-        ESP_LOGI(TAG_ROTINA, "%s;%d", hora, adc_raw);
-
         xSemaphoreGive(xSemaphore_handle);
 
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(100));
     }
 
     vTaskDelete(xTaskRotina_handle);
 }
 
-static void vTaskSD(void *pvParameters)
+static void vTaskUART(void *pvParameters)
 {
-    while(1)
+    int txBytes = -1;
+    while (1)
     {
-        if( xSemaphoreTake(xSemaphore_handle, 100) == pdTRUE)
+        if (xSemaphoreTake(xSemaphore_handle, 100) == pdTRUE)
         {
-            ESP_LOGI(TAG_SD, "GRAVANDO DADOS");
+            snprintf(&buffer[0], 15, "%x:%x:%x;%d\n", relogio.hour, relogio.min, relogio.sec, adc_raw);
+            txBytes = uart_write_bytes(UART_NUM_1, buffer, sizeof(buffer));
+
+            if (txBytes == -1)
+            {
+                //ALgum Sinalizador de Error
+            }
         }
 
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
-    vTaskDelete(xTaskSD_handle);
+    vTaskDelete(xTaskUART_handle);
 }
 
 static void vTaskMQTT(void *pvParameters)
@@ -297,11 +306,23 @@ static esp_err_t I2C_config(void)
     return ESP_OK;
 }
 
-static esp_err_t SPI_config(void)
+static esp_err_t UART_config(void)
 {
-    //Configracaoes para caso coloque o modulo 
-    //de cartao SD
-    
+    // Estrutura com parametros da uart
+    const uart_config_t uart_config = {
+        .baud_rate = 115200,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .source_clk = UART_SCLK_DEFAULT,
+    };
+
+    // Passando a estrutura, configurando os pinos e instalando o driver uart
+    ESP_ERROR_CHECK(uart_param_config(UART_NUM_1, &uart_config));
+    ESP_ERROR_CHECK(uart_set_pin(UART_NUM_1, TXD1_PIN, RXD1_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, RX_BUFFER_SIZE, 0, 0, NULL, 0));
+
     return ESP_OK;
 }
 
