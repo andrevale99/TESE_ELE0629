@@ -56,6 +56,8 @@ typedef struct
 
     int Timeout;
 
+    i2c_master_dev_handle_t dev_handle;
+
 } ds3231_t;
 
 //  @brief Verifica o bit de status do RTC
