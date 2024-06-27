@@ -18,3 +18,13 @@ menu "Wi-Fi Connection"
         help
             Tentativas de reconexão
 endmenu
+
+menu "MQTT Config"
+    
+    config MQTT_URI
+        string "uri"
+        default "Not set"
+        help
+            uri do broker
+    
+endmenu
