@@ -1,6 +1,6 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
-#include <freertos/queue.h>
+#include <freertos/semphr.h>
 
 #include <esp_adc/adc_oneshot.h>
 #include <hal/adc_types.h>
@@ -47,6 +47,11 @@ const char *TAG_ROTINA = "[ROTINA]";
 static int adc_raw = 0;
 ds3231_t relogio;
 
+static void vTaskSD(void *pvParameters);
+TaskHandle_t xTaskSD_handle = NULL;
+const char *TAG_SD = "[SD]";
+SemaphoreHandle_t xSemaphore_handle = NULL;
+
 static void vTaskMQTT(void *pvParameters);
 TaskHandle_t xTaskMQTT_handle = NULL;
 const char *TAG_MQTT = "[MQTT]";
@@ -65,9 +70,11 @@ i2c_master_bus_handle_t xI2CMaster_handle = NULL;
 
 static esp_err_t I2C_config(void);
 
+static esp_err_t SPI_config(void);
+
 static esp_err_t MQTT_config(void);
 const char *topic_LastWill = "UFRN/LiuKang/Status";
-const char *uri = "mqtt://mqtt.eclipseprojects.io";
+const char *uri = CONFIG_MQTT_URI;
 
 static inline uint32_t example_angle_to_compare(int angle)
 {
@@ -80,15 +87,18 @@ void app_main(void)
 {
     const char *TAG = "[APP_MAIN]";
 
+    xSemaphore_handle = xSemaphoreCreateBinary();
+
     ESP_LOGW(TAG, "GPIO_config(): %s", esp_err_to_name(GPIO_config()));
     ESP_LOGW(TAG, "ADC_config(): %s", esp_err_to_name(ADC_config()));
     ESP_LOGW(TAG, "MCPWM_config(): %s", esp_err_to_name(MCPWM_config()));
     ESP_LOGW(TAG, "MQTT_config(): %s", esp_err_to_name(MQTT_config()));
     ESP_LOGW(TAG, "I2C_config(): %s", esp_err_to_name(I2C_config()));
 
-    xTaskCreate(vTaskRotina, "Rotina task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskRotina_handle);
     xTaskCreate(vTaskLCD, "LCD task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskLCD_handle);
     xTaskCreate(vTaskMQTT, "MQTT task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskMQTT_handle);
+    xTaskCreate(vTaskRotina, "Rotina task", configMINIMAL_STACK_SIZE + 1024, NULL, 3, &xTaskRotina_handle);
+    xTaskCreate(vTaskSD, "SD task", configMINIMAL_STACK_SIZE + 1024, NULL, 2, &xTaskSD_handle);
 
     // int angle = 0;
     // int step = 2;
@@ -123,33 +133,39 @@ static void vTaskLCD(void *pvParameters)
 static void vTaskRotina(void *pvParameters)
 {
     char hora[10];
-    
-    i2c_device_config_t dev_cfg =
-        {
-            .dev_addr_length = I2C_ADDR_BIT_LEN_7,
-            .device_address = DS3231_ADDR,
-            .scl_speed_hz = I2C_MASTER_FREQ_HZ,
-        };
-    
-    i2c_master_dev_handle_t dev_handle = NULL;
-    ESP_ERROR_CHECK(i2c_master_bus_add_device(xI2CMaster_handle, &dev_cfg, &dev_handle));
 
     relogio.Timeout = 500;
 
     while (1)
     {
-        // ESP_LOGW(TAG_ROTINA, "%s", esp_err_to_name(i2c_master_probe(xI2CMaster_handle, DS3231_ADDR, 1000)));
-        ds3231_get_clock(dev_handle, &relogio);
+        ds3231_get_clock(relogio.dev_handle, &relogio);
         adc_oneshot_read(xADC1_handle, ADC_CHANNEL_0, &adc_raw);
 
-        snprintf(&hora[0], 10, "%x:%x:%x ", relogio.hour, relogio.min, relogio.sec);
+        snprintf(&hora[0], 10, "%x:%x:%x", relogio.hour, relogio.min, relogio.sec);
 
-        ESP_LOGI(TAG_ROTINA, "%s %d", hora, adc_raw);
+        ESP_LOGI(TAG_ROTINA, "%s;%d", hora, adc_raw);
+
+        xSemaphoreGive(xSemaphore_handle);
 
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
     vTaskDelete(xTaskRotina_handle);
+}
+
+static void vTaskSD(void *pvParameters)
+{
+    while(1)
+    {
+        if( xSemaphoreTake(xSemaphore_handle, 100) == pdTRUE)
+        {
+            ESP_LOGI(TAG_SD, "GRAVANDO DADOS");
+        }
+
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+
+    vTaskDelete(xTaskSD_handle);
 }
 
 static void vTaskMQTT(void *pvParameters)
@@ -269,6 +285,23 @@ static esp_err_t I2C_config(void)
 
     ESP_ERROR_CHECK(i2c_new_master_bus(&i2c_mst_config, &xI2CMaster_handle));
 
+    i2c_device_config_t dev_cfg =
+        {
+            .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+            .device_address = DS3231_ADDR,
+            .scl_speed_hz = I2C_MASTER_FREQ_HZ,
+        };
+
+    ESP_ERROR_CHECK(i2c_master_bus_add_device(xI2CMaster_handle, &dev_cfg, &(relogio.dev_handle)));
+
+    return ESP_OK;
+}
+
+static esp_err_t SPI_config(void)
+{
+    //Configracaoes para caso coloque o modulo 
+    //de cartao SD
+    
     return ESP_OK;
 }
 
