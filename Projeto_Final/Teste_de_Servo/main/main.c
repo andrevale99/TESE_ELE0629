@@ -57,7 +57,8 @@ static void vTaskUART(void *pvParameters);
 TaskHandle_t xTaskUART_handle = NULL;
 const char *TAG_UART = "[UART]";
 char buffer[MAX_BUFFER_SIZE];
-SemaphoreHandle_t xSemaphore_handle = NULL;
+SemaphoreHandle_t xSemaphore_RotinaToUART_handle = NULL;
+SemaphoreHandle_t xSemaphore_UARTToMQTT_handle = NULL;
 
 static void vTaskMQTT(void *pvParameters);
 TaskHandle_t xTaskMQTT_handle = NULL;
@@ -94,7 +95,8 @@ void app_main(void)
 {
     const char *TAG = "[APP_MAIN]";
 
-    xSemaphore_handle = xSemaphoreCreateBinary();
+    xSemaphore_RotinaToUART_handle = xSemaphoreCreateBinary();
+    xSemaphore_UARTToMQTT_handle = xSemaphoreCreateBinary();
 
     GPIO_config();
     ADC_config();
@@ -147,7 +149,7 @@ static void vTaskRotina(void *pvParameters)
         ds3231_get_clock(relogio.dev_handle, &relogio);
         adc_oneshot_read(xADC1_handle, ADC_CHANNEL_0, &adc_raw);
 
-        xSemaphoreGive(xSemaphore_handle);
+        xSemaphoreGive(xSemaphore_RotinaToUART_handle);
 
         vTaskDelay(pdMS_TO_TICKS(100));
     }
@@ -160,16 +162,18 @@ static void vTaskUART(void *pvParameters)
     int txBytes = -1;
     while (1)
     {
-        if (xSemaphoreTake(xSemaphore_handle, 100) == pdTRUE)
+        if (xSemaphoreTake(xSemaphore_RotinaToUART_handle, 100) == pdTRUE)
         {
-            snprintf(&buffer[0], 15, "%x:%x:%x;%d\n", relogio.hour, relogio.min, relogio.sec, adc_raw);
+            snprintf(&buffer[0], 18, "255;%x:%x:%x;%d\n", relogio.hour, relogio.min, relogio.sec, adc_raw);
             txBytes = uart_write_bytes(UART_NUM_1, buffer, sizeof(buffer));
 
             if (txBytes == -1)
             {
-                //ALgum Sinalizador de Error
+                // ALgum Sinalizador de Error
             }
         }
+
+        xSemaphoreGive(xSemaphore_UARTToMQTT_handle);
 
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
@@ -179,10 +183,24 @@ static void vTaskUART(void *pvParameters)
 
 static void vTaskMQTT(void *pvParameters)
 {
-    mqtt_subscribe("UFRN/LiuKang/Teste", 0);
+    char *Mqtt_Hora = "UFRN/LiuKang/Hora";
+    char *Mqtt_Tensao = "UFRN/LiuKang/Tensao";
+
+    mqtt_subscribe(Mqtt_Hora, 0);
+    mqtt_subscribe(Mqtt_Tensao, 0);
 
     while (1)
     {
+        if (xSemaphoreTake(xSemaphore_UARTToMQTT_handle, 100) == pdTRUE)
+        {
+            snprintf(&buffer[0], "%x:%x:%x", relogio.hour, relogio.min, relogio.sec);
+            mqtt_publish(Mqtt_Hora, &buffer[0], 0, -1);
+
+            snprintf(&buffer[0], "%d", adc_raw);
+            mqtt_publish(Mqtt_Tensao, &buffer[0], 0, -1);
+            // Enviar as Horas e a Tensao pelo Mqtt
+        }
+
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
