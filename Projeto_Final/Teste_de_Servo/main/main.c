@@ -73,10 +73,8 @@ mcpwm_oper_handle_t oper = NULL;
 mcpwm_cmpr_handle_t comparator = NULL;
 mcpwm_gen_handle_t generator = NULL;
 
-static esp_err_t GPIO_config(void);
-i2c_master_bus_handle_t xI2CMaster_handle = NULL;
-
 static esp_err_t I2C_config(void);
+i2c_master_bus_handle_t xI2CMaster_handle = NULL;
 
 static esp_err_t UART_config(void);
 
@@ -98,7 +96,6 @@ void app_main(void)
     xSemaphore_RotinaToUART_handle = xSemaphoreCreateBinary();
     xSemaphore_UARTToMQTT_handle = xSemaphoreCreateBinary();
 
-    GPIO_config();
     ADC_config();
     MCPWM_config();
     MQTT_config();
@@ -109,21 +106,6 @@ void app_main(void)
     xTaskCreate(vTaskMQTT, "MQTT task", configMINIMAL_STACK_SIZE + 1024, NULL, 1, &xTaskMQTT_handle);
     xTaskCreate(vTaskRotina, "Rotina task", configMINIMAL_STACK_SIZE + 1024, NULL, 3, &xTaskRotina_handle);
     xTaskCreate(vTaskUART, "UART task", configMINIMAL_STACK_SIZE + 1024, NULL, 2, &xTaskUART_handle);
-
-    // int angle = 0;
-    // int step = 2;
-    // while (true)
-    // {
-    //     ESP_LOGI(TAG, "Angle of rotation: %d", angle);
-    //     ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(angle)));
-    //     // Add delay, since it takes time for servo to rotate, usually 200ms/60degree rotation under 5V power supply
-    //     vTaskDelay(pdMS_TO_TICKS(500));
-    //     if ((angle + step) > 60 || (angle + step) < -60)
-    //     {
-    //         step *= -1;
-    //     }
-    //     angle += step;
-    // }
 }
 
 //=====================================================
@@ -144,10 +126,19 @@ static void vTaskRotina(void *pvParameters)
 {
     relogio.Timeout = 500;
 
+    int angle = 0;
+    int step = 2;
     while (1)
     {
         ds3231_get_clock(relogio.dev_handle, &relogio);
         adc_oneshot_read(xADC1_handle, ADC_CHANNEL_0, &adc_raw);
+
+        ESP_ERROR_CHECK(mcpwm_comparator_set_compare_value(comparator, example_angle_to_compare(angle)));
+        if ((angle + step) > 60 || (angle + step) < -60)
+        {
+            step *= -1;
+        }
+        angle += step;
 
         xSemaphoreGive(xSemaphore_RotinaToUART_handle);
 
@@ -193,12 +184,11 @@ static void vTaskMQTT(void *pvParameters)
     {
         if (xSemaphoreTake(xSemaphore_UARTToMQTT_handle, 100) == pdTRUE)
         {
-            snprintf(&buffer[0], "%x:%x:%x", relogio.hour, relogio.min, relogio.sec);
+            snprintf(&buffer[0], 10,"%x:%x:%x", relogio.hour, relogio.min, relogio.sec);
             mqtt_publish(Mqtt_Hora, &buffer[0], 0, -1);
 
-            snprintf(&buffer[0], "%d", adc_raw);
+            snprintf(&buffer[0], 4,"%d", adc_raw);
             mqtt_publish(Mqtt_Tensao, &buffer[0], 0, -1);
-            // Enviar as Horas e a Tensao pelo Mqtt
         }
 
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -279,22 +269,6 @@ static esp_err_t MCPWM_config(void)
     ESP_LOGD(TAG, "Enable and start timer");
     ESP_ERROR_CHECK(mcpwm_timer_enable(timer));
     ESP_ERROR_CHECK(mcpwm_timer_start_stop(timer, MCPWM_TIMER_START_NO_STOP));
-
-    return ESP_OK;
-}
-
-static esp_err_t GPIO_config(void)
-{
-    gpio_config_t config =
-        {
-            .pin_bit_mask = BOTAO,
-            .mode = GPIO_MODE_INPUT,
-            .pull_up_en = GPIO_PULLUP_ENABLE,
-            .pull_down_en = GPIO_PULLDOWN_DISABLE,
-            .intr_type = GPIO_INTR_NEGEDGE};
-
-    // Colocar uma rotina do butao
-    // para abortar o teste
 
     return ESP_OK;
 }
