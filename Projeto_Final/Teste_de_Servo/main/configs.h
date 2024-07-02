@@ -1,3 +1,6 @@
+#ifndef CONFIGS_H
+#define CONFIGS_H
+
 #include <esp_adc/adc_oneshot.h>
 #include <hal/adc_types.h>
 #include <driver/mcpwm_prelude.h>
@@ -179,3 +182,5 @@ static esp_err_t MQTT_config(void)
 
     return ESP_OK;
 }
+
+#endif
