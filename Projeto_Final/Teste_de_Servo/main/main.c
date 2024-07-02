@@ -16,17 +16,10 @@
 #include <freertos/task.h>
 #include <freertos/semphr.h>
 
-#include <esp_adc/adc_oneshot.h>
-#include <hal/adc_types.h>
-#include <driver/mcpwm_prelude.h>
-#include <driver/gpio.h>
-#include <driver/i2c_master.h>
-#include <driver/uart.h>
-
 #include <esp_log.h>
 #include <esp_err.h>
 
-#include "include.h"
+#include "configs.h"
 //=====================================================
 //  PROTOTIPOS E VARS
 //=====================================================
