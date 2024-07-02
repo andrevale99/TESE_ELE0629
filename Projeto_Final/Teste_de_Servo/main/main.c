@@ -37,8 +37,6 @@
 #define SERVO_TIMEBASE_RESOLUTION_HZ 1000000 // 1MHz, 1us per tick
 #define SERVO_TIMEBASE_PERIOD 20000          // 20000 ticks, 20ms
 
-#define BOTAO GPIO_NUM_17
-
 //=====================================================
 //  PROTOTIPOS E VARS
 //=====================================================
