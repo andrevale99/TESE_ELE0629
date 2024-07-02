@@ -4,7 +4,7 @@
  *
  * @brief Codigo para leitura da Tensao de uma bateria a partir do
  * movimento do servo. Os dados da hora e tensao são enviados pela
- * UART pelo USB e por MQTT.
+ * UART (pela USB) e por MQTT.
  *
  * @note O programa pode ser modificado para caber na lógica
  * de um sistema embarcado para uma aeromodelo.

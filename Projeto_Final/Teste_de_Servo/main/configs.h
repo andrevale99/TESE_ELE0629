@@ -1,6 +1,11 @@
 #ifndef CONFIGS_H
 #define CONFIGS_H
 
+/**
+ * @brief Funcoes e estruturas para as configuracoes
+ * dos perifericos do ESP32
+*/
+
 #include <esp_adc/adc_oneshot.h>
 #include <hal/adc_types.h>
 #include <driver/mcpwm_prelude.h>
