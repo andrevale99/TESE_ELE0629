@@ -70,6 +70,7 @@ void app_main(void)
     xSemaphore_RotinaToUART_handle = xSemaphoreCreateBinary();
     xSemaphore_UARTToMQTT_handle = xSemaphoreCreateBinary();
 
+    GPIO_config();
     ADC_config();
     MCPWM_config();
     MQTT_config();
@@ -91,6 +92,7 @@ static void vTaskLCD(void *pvParameters)
     while (1)
     {
         // Compre um LCD I2C peste
+        ESP_LOGI(TAG_LCD, "%d", gpio_get_level(GPIO_NUM_38));
         vTaskDelay(pdMS_TO_TICKS(1000));
     }
 
@@ -171,7 +173,7 @@ static void vTaskMQTT(void *pvParameters)
             snprintf(&buffer[0], 10, "%x:%x:%x", relogio.hour, relogio.min, relogio.sec);
             mqtt_publish(Mqtt_Hora, &buffer[0], 0, -1);
 
-            snprintf(&buffer[0], 4, "%d", adc_raw);
+            snprintf(&buffer[0], 5, "%d", adc_raw);
             mqtt_publish(Mqtt_Tensao, &buffer[0], 0, -1);
         }
 
