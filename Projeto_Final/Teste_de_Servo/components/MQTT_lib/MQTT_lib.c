@@ -40,8 +40,8 @@ static void mqtt_event_handler(void *event_handler_arg, esp_event_base_t event_b
         break;
     case MQTT_EVENT_DATA:
         ESP_LOGI(TAG, "MQTT_EVENT_DATA");
-        printf("topic: %.*s\n", event->topic_len, event->topic);
-        printf("message: %.*s\n", event->data_len, event->data);
+        //printf("topic: %.*s\n", event->topic_len, event->topic);
+        //printf("message: %.*s\n", event->data_len, event->data);
         break;
     case MQTT_EVENT_ERROR:
         ESP_LOGE(TAG, "ERROR %s", strerror(event->error_handle->esp_transport_sock_errno));
