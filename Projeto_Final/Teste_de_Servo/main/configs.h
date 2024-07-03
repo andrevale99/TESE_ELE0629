@@ -4,7 +4,7 @@
 /**
  * @brief Funcoes e estruturas para as configuracoes
  * dos perifericos do ESP32
-*/
+ */
 
 #include <esp_adc/adc_oneshot.h>
 #include <hal/adc_types.h>
@@ -26,8 +26,8 @@
 #define I2C_MASTER_SDA_IO 22
 #define I2C_MASTER_FREQ_HZ 100000
 
-#define TXD1_PIN 1
-#define RXD1_PIN 3
+#define TXD_PIN 17
+#define RXD_PIN 16
 #define RX_BUFFER_SIZE 256
 #define MAX_BUFFER_SIZE 256
 
@@ -41,13 +41,14 @@
 #define SERVO_TIMEBASE_RESOLUTION_HZ 1000000 // 1MHz, 1us per tick
 #define SERVO_TIMEBASE_PERIOD 20000          // 20000 ticks, 20ms
 
+#define BOTAO (1<<GPIO_NUM_12)
 
 /**
  * @brief Funcao retirado do exemplor MCPWM_servo para
  * realizar a conversao do pulso para angulo
- * 
+ *
  * @param angle Angulo que deseja mover o servo
-*/
+ */
 static inline uint32_t example_angle_to_compare(int angle)
 {
     return (angle - SERVO_MIN_DEGREE) * (SERVO_MAX_PULSEWIDTH_US - SERVO_MIN_PULSEWIDTH_US) / (SERVO_MAX_DEGREE - SERVO_MIN_DEGREE) + SERVO_MIN_PULSEWIDTH_US;
@@ -162,7 +163,7 @@ static esp_err_t UART_config(void)
 
     // Passando a estrutura, configurando os pinos e instalando o driver uart
     ESP_ERROR_CHECK(uart_param_config(UART_NUM_1, &uart_config));
-    ESP_ERROR_CHECK(uart_set_pin(UART_NUM_1, TXD1_PIN, RXD1_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
+    ESP_ERROR_CHECK(uart_set_pin(UART_NUM_1, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE));
     ESP_ERROR_CHECK(uart_driver_install(UART_NUM_1, RX_BUFFER_SIZE, 0, 0, NULL, 0));
 
     return ESP_OK;
@@ -184,6 +185,21 @@ static esp_err_t MQTT_config(void)
     wifi_init_sta();
 
     mqtt_start(uri, topic_LastWill); // Iniciando conexão MQTT. Função da Lib criada, MQTT.h
+
+    return ESP_OK;
+}
+
+static esp_err_t GPIO_config(void)
+{
+    gpio_config_t config = {
+        .pin_bit_mask = BOTAO,
+        .mode = GPIO_MODE_INPUT_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_ENABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+
+    ESP_ERROR_CHECK(gpio_config(&config));
 
     return ESP_OK;
 }
